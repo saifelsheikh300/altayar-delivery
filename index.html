@@ -1,0 +1,514 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الطيار ديليفري - اطلب دلوقتي</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',Arial,sans-serif!important}
+:root{
+  --orange:#FF4500;--orange-dark:#CC3700;--orange-light:#FF6A33;
+  --orange-glow:rgba(255,69,0,0.13);--off-white:#FFF5F2;--gray:#F7F7F7;
+  --text-dark:#1A1A1A;--text-mid:#666;--border:#FFD5C8;
+  --shadow:0 4px 24px rgba(255,69,0,0.11);--radius:16px;
+}
+body{background:var(--off-white);color:var(--text-dark);min-height:100vh;direction:rtl}
+
+/* HEADER */
+header{background:var(--orange);position:sticky;top:0;z-index:100;box-shadow:0 2px 20px rgba(255,69,0,0.35)}
+.header-inner{max-width:640px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:13px 20px}
+.logo-main{font-size:24px;font-weight:900;color:#fff}
+.logo-sub{font-size:11px;font-weight:600;color:rgba(255,255,255,0.8);letter-spacing:1px}
+.logo-icon{width:42px;height:42px;background:#fff;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:21px}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,var(--orange-dark),var(--orange) 60%,var(--orange-light));color:#fff;text-align:center;padding:26px 20px 30px}
+.hero h1{font-size:21px;font-weight:900;margin-bottom:6px}
+.hero p{font-size:13px;opacity:.88;font-weight:500}
+.steps-row{display:flex;justify-content:center;gap:8px;margin-top:16px;flex-wrap:wrap}
+.step-badge{background:rgba(255,255,255,0.18);border:1px solid rgba(255,255,255,0.32);border-radius:50px;padding:5px 13px;font-size:12px;font-weight:700;color:#fff}
+
+/* MAIN */
+main{max-width:640px;margin:0 auto;padding:22px 14px 60px;display:flex;flex-direction:column;gap:15px}
+
+/* CARD */
+.card{background:#fff;border-radius:var(--radius);padding:20px 18px;box-shadow:var(--shadow);border:1px solid var(--border);transition:box-shadow .2s,border-color .2s}
+.card:focus-within{box-shadow:0 6px 28px rgba(255,69,0,0.18);border-color:var(--orange-light)}
+.card-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.card-icon{width:36px;height:36px;border-radius:10px;background:var(--orange-glow);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.card-title{font-size:15px;font-weight:800}
+.card-subtitle{font-size:12px;color:var(--text-mid);font-weight:500}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:13px}
+.field:last-child{margin-bottom:0}
+label{font-size:13px;font-weight:700}
+label .req{color:var(--orange);margin-right:2px}
+input,textarea,select{font-size:14px;font-weight:500;border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;outline:none;transition:border .2s,box-shadow .2s;background:var(--gray);color:var(--text-dark);direction:rtl;width:100%}
+input:focus,textarea:focus,select:focus{border-color:var(--orange);background:#fff;box-shadow:0 0 0 3px var(--orange-glow)}
+input::placeholder,textarea::placeholder{color:#C5C5C5;font-weight:400}
+textarea{resize:vertical;min-height:88px}
+.row-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* VOICE */
+.input-with-voice{position:relative;width:100%}
+.input-with-voice input,.input-with-voice textarea{padding-left:50px}
+.voice-btn{position:absolute;left:9px;top:50%;transform:translateY(-50%);background:var(--orange);border:none;border-radius:8px;width:33px;height:33px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:15px;transition:background .2s}
+.voice-btn.ta{top:14px;transform:none}
+.voice-btn:hover{background:var(--orange-dark)}
+.voice-btn.recording{background:#e53935;animation:pulse-r 1s infinite}
+@keyframes pulse-r{0%,100%{box-shadow:0 0 0 0 rgba(229,57,53,.4)}50%{box-shadow:0 0 0 8px rgba(229,57,53,0)}}
+.voice-status{font-size:12px;font-weight:700;color:var(--orange);min-height:16px;margin-top:3px}
+.hint{font-size:11px;color:var(--text-mid);font-weight:500;margin-top:3px}
+
+/* DIVIDER */
+.divider{display:flex;align-items:center;gap:10px;margin:6px 0}
+.divider-line{flex:1;height:1px;background:var(--border)}
+.divider-icon{width:30px;height:30px;background:var(--orange-glow);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;border:1.5px solid var(--border)}
+
+/* CHIPS */
+.chips-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.chip{background:var(--orange-glow);border:1.5px solid var(--border);border-radius:50px;padding:6px 13px;font-size:12px;font-weight:700;color:var(--orange-dark);cursor:pointer;transition:all .15s;user-select:none}
+.chip:hover,.chip.active{background:var(--orange);color:#fff;border-color:var(--orange)}
+
+/* SUBMIT */
+.submit-btn{width:100%;background:var(--orange);color:#fff;font-size:17px;font-weight:900;border:none;border-radius:var(--radius);padding:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 6px 20px rgba(255,69,0,0.38);transition:all .2s}
+.submit-btn:hover{background:var(--orange-dark);box-shadow:0 8px 26px rgba(255,69,0,.48)}
+.submit-btn:active{transform:scale(.98)}
+.submit-btn.loading{opacity:.7;pointer-events:none}
+
+/* SUCCESS */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;padding:20px}
+.overlay.show{display:flex}
+.success-card{background:#fff;border-radius:24px;padding:38px 28px;text-align:center;max-width:360px;width:100%;animation:pop .3s cubic-bezier(.34,1.56,.64,1)}
+@keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.success-icon{width:76px;height:76px;background:linear-gradient(135deg,var(--orange),var(--orange-light));border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:36px;margin:0 auto 18px}
+.success-title{font-size:21px;font-weight:900;margin-bottom:7px}
+.success-msg{font-size:13px;color:var(--text-mid);font-weight:500;line-height:1.7;margin-bottom:22px}
+.success-close{background:var(--orange);color:#fff;border:none;border-radius:12px;padding:12px 34px;font-size:15px;font-weight:800;cursor:pointer}
+
+footer{text-align:center;padding:14px;font-size:12px;color:#BBB;font-weight:500}
+
+@media(max-width:480px){.row-2{grid-template-columns:1fr}.hero h1{font-size:18px}main{padding:16px 10px 50px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div>
+      <div class="logo-main">الطيار</div>
+      <div class="logo-sub">DELIVERY</div>
+    </div>
+    <div class="logo-icon">🛵</div>
+  </div>
+</header>
+
+<div class="hero">
+  <h1>اطلب دلوقتي ووصلك بسرعة ✈️</h1>
+  <p>أدخل بيانات طلبك وهنوصله لحد بابك</p>
+  <div class="steps-row">
+    <div class="step-badge">📋 بياناتك</div>
+    <div class="step-badge">📍 العناوين</div>
+    <div class="step-badge">📦 الطلب</div>
+    <div class="step-badge">🚀 إرسال</div>
+  </div>
+</div>
+
+<main>
+
+  <!-- بيانات العميل -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">👤</div>
+      <div>
+        <div class="card-title">بيانات العميل</div>
+        <div class="card-subtitle">الاسم ورقم التليفون</div>
+      </div>
+    </div>
+    <div class="row-2">
+      <div class="field">
+        <label>الاسم <span class="req">*</span></label>
+        <input type="text" id="client-name" placeholder="اسم العميل" autocomplete="off">
+      </div>
+      <div class="field">
+        <label>التليفون <span class="req">*</span></label>
+        <input type="tel" id="client-phone" placeholder="01xxxxxxxxx" inputmode="numeric">
+      </div>
+    </div>
+  </div>
+
+  <!-- العناوين -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">📍</div>
+      <div>
+        <div class="card-title">العناوين</div>
+        <div class="card-subtitle">من فين لفين</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>📦 عنوان الاستلام <span class="req">*</span></label>
+      <div class="input-with-voice">
+        <input type="text" id="from-address" placeholder="مثال: محل النور، شارع الجمهورية">
+        <button class="voice-btn" onclick="startVoice('from-address','from-status',this)">🎤</button>
+      </div>
+      <div class="voice-status" id="from-status"></div>
+      <div class="hint">💡 اضغط المايك وقول العنوان بصوتك</div>
+    </div>
+
+    <div class="divider">
+      <div class="divider-line"></div>
+      <div class="divider-icon">⬇️</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="field" style="margin-top:12px">
+      <label>🏠 عنوان التوصيل <span class="req">*</span></label>
+      <div class="input-with-voice">
+        <input type="text" id="to-address" placeholder="مثال: شارع النيل، برج الياسمين، شقة 12">
+        <button class="voice-btn" onclick="startVoice('to-address','to-status',this)">🎤</button>
+      </div>
+      <div class="voice-status" id="to-status"></div>
+      <div class="hint">💡 اكتب يدوي أو استخدم المايك</div>
+    </div>
+  </div>
+
+  <!-- تفاصيل الطلب -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-icon">📦</div>
+      <div>
+        <div class="card-title">تفاصيل الطلب</div>
+        <div class="card-subtitle">إيه اللي هيتبعت؟</div>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>نوع الطلب <span class="req">*</span></label>
+      <div class="chips-row" id="type-chips">
+        <button class="chip active" onclick="selectChip(this)">🛍️ مشتريات</button>
+        <button class="chip" onclick="selectChip(this)">🍕 أكل وشرب</button>
+        <button class="chip" onclick="selectChip(this)">💊 أدوية</button>
+        <button class="chip" onclick="selectChip(this)">📄 مستندات</button>
+        <button class="chip" onclick="selectChip(this)">🔧 أخرى</button>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>تفاصيل الطلب <span class="req">*</span></label>
+      <div class="input-with-voice">
+        <textarea id="order-details" placeholder="اكتب تفاصيل الطلب أو اضغط المايك..."></textarea>
+        <button class="voice-btn ta" onclick="startVoice('order-details','order-status',this)">🎤</button>
+      </div>
+      <div class="voice-status" id="order-status"></div>
+    </div>
+
+    <div class="row-2">
+      <div class="field">
+        <label>💰 المبلغ (جنيه)</label>
+        <input type="number" id="amount" placeholder="0" inputmode="decimal">
+      </div>
+      <div class="field">
+        <label>🕐 وقت التوصيل</label>
+        <select id="delivery-time">
+          <option value="">اختر...</option>
+          <option value="asap">دلوقتي فوراً 🔥</option>
+          <option value="30min">خلال 30 دقيقة</option>
+          <option value="1hour">خلال ساعة</option>
+          <option value="scheduled">موعد محدد</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>ملاحظات إضافية</label>
+      <input type="text" id="notes" placeholder="مثال: اتصل قبل الوصول، مبنى أزرق...">
+    </div>
+  </div>
+
+  <!-- زر الإرسال دايماً آخر حاجة -->
+  <div id="submit-wrap">
+    <button class="submit-btn" id="submit-btn" onclick="submitOrder()">
+      <span>إرسال الطلب</span>
+      <span>🚀</span>
+    </button>
+  </div>
+
+</main>
+
+<footer>الطيار ديليفري © 2025 — وصلك في ثواني ✈️</footer>
+
+<div class="overlay" id="success-overlay">
+  <div class="success-card">
+    <div class="success-icon">✅</div>
+    <div class="success-title">تم استلام طلبك! 🎉</div>
+    <div class="success-msg" id="success-msg">جاري التوصيل...</div>
+    <button class="success-close" onclick="closeSuccess()">طلب جديد</button>
+  </div>
+</div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ⚠️ ضع بيانات Firebase هنا
+const firebaseConfig = {
+  apiKey: "AIzaSyBuKW9vBGj_q1LIE5QrRtFmpsJ5Ifg6D4w",
+  authDomain: "altayar-delivery.firebaseapp.com",
+  projectId: "altayar-delivery",
+  storageBucket: "altayar-delivery.firebasestorage.app",
+  messagingSenderId: "244765017519",
+  appId: "1:244765017519:web:62ded292f78c9be40c5b5a"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+let activeRecognition = null;
+
+window.startVoice = function(fieldId, statusId, btn) {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById(statusId).textContent = '⚠️ مش متاح في المتصفح ده'; return; }
+  const statusEl = document.getElementById(statusId);
+  if (activeRecognition) {
+    activeRecognition.stop(); activeRecognition = null;
+    btn.classList.remove('recording'); btn.textContent = '🎤'; statusEl.textContent = ''; return;
+  }
+  const r = new SR();
+  r.lang = 'ar-EG'; r.interimResults = true; r.maxAlternatives = 1;
+  activeRecognition = r;
+  btn.classList.add('recording'); btn.textContent = '⏹️';
+  statusEl.textContent = '🔴 بسمعك... اتكلم دلوقتي';
+  r.onresult = e => {
+    const t = Array.from(e.results).map(x => x[0].transcript).join('');
+    document.getElementById(fieldId).value = t;
+    if (e.results[e.results.length-1].isFinal) statusEl.textContent = '✅ اتسجل!';
+  };
+  r.onerror = () => { statusEl.textContent='⚠️ حاول تاني'; btn.classList.remove('recording'); btn.textContent='🎤'; activeRecognition=null; };
+  r.onend = () => { btn.classList.remove('recording'); btn.textContent='🎤'; activeRecognition=null; if(statusEl.textContent.includes('بسمعك')) statusEl.textContent=''; };
+  r.start();
+};
+
+window.selectChip = function(el) {
+  document.querySelectorAll('#type-chips .chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+};
+
+window.submitOrder = async function() {
+  const name    = document.getElementById('client-name').value.trim();
+  const phone   = document.getElementById('client-phone').value.trim();
+  const from    = document.getElementById('from-address').value.trim();
+  const to      = document.getElementById('to-address').value.trim();
+  const details = document.getElementById('order-details').value.trim();
+  const amount  = document.getElementById('amount').value.trim();
+  const time    = document.getElementById('delivery-time').value;
+  const notes   = document.getElementById('notes').value.trim();
+  const type    = document.querySelector('#type-chips .chip.active')?.textContent.trim() || '';
+
+  // تحقق ديناميكي بناءً على إعدادات الأدمن
+  const isReq = id => {
+    const el = document.getElementById(id);
+    if (!el) return false;
+    const field = el.closest('.field');
+    if (field && field.style.display === 'none') return false; // مخفي = مش إجباري
+    return el.dataset.required !== 'false'; // افتراضي = إجباري
+  };
+
+  const missing = [];
+  if (isReq('client-name')   && !name)    missing.push('اسم العميل');
+  if (isReq('client-phone')  && !phone)   missing.push('التليفون');
+  if (isReq('from-address')  && !from)    missing.push('عنوان الاستلام');
+  if (isReq('to-address')    && !to)      missing.push('عنوان التوصيل');
+  if (isReq('order-details') && !details) missing.push('تفاصيل الطلب');
+
+  if (missing.length) {
+    alert('⚠️ من فضلك اكمل:\n' + missing.join('\n'));
+    return;
+  }
+
+  const btn = document.getElementById('submit-btn');
+  btn.classList.add('loading'); btn.querySelector('span').textContent = 'جاري الإرسال...';
+
+  try {
+    await addDoc(collection(db, 'orders'), {
+      name, phone, from, to, details, amount, time, notes, type,
+      status: 'جديد',
+      createdAt: serverTimestamp()
+    });
+    document.getElementById('success-msg').innerHTML =
+      `تم استلام طلبك يا <strong>${name}</strong>! 🎉<br>هنبدأ التجهيز فوراً ✈️`;
+    document.getElementById('success-overlay').classList.add('show');
+  } catch(e) {
+    alert('❌ حصل خطأ، حاول تاني');
+    console.error(e);
+  }
+  btn.classList.remove('loading'); btn.querySelector('span').textContent = 'إرسال الطلب';
+};
+
+window.closeSuccess = function() {
+  document.getElementById('success-overlay').classList.remove('show');
+  document.querySelectorAll('input,textarea,select').forEach(el => el.value='');
+  ['from-status','to-status','order-status'].forEach(id => document.getElementById(id).textContent='');
+  document.querySelectorAll('#type-chips .chip').forEach((c,i) => c.classList.toggle('active',i===0));
+};
+</script>
+</body>
+</html>
+
+<script>
+// Apply admin settings from localStorage
+(function(){
+  const saved = localStorage.getItem('altayar_settings');
+  if (!saved) return;
+  try {
+    const s = JSON.parse(saved);
+    const set = (sel, prop, val) => { document.querySelectorAll(sel).forEach(el => { if(val!==undefined && val!==null) el[prop]=val; }); };
+    const show = (sel, visible) => { document.querySelectorAll(sel).forEach(el => el.style.display = visible ? '' : 'none'); };
+
+    if (s.pageTitle) document.title = s.pageTitle;
+
+    // Colors via CSS vars
+    const r = document.documentElement.style;
+    if (s.orange)      r.setProperty('--orange', s.orange);
+    if (s.orangeDark)  r.setProperty('--orange-dark', s.orangeDark);
+    if (s.orangeLight) r.setProperty('--orange-light', s.orangeLight);
+    if (s.bg)          r.setProperty('--off-white', s.bg);
+
+    // Font sizes
+    if (s.logoFontSize)    document.querySelector('.logo-main') && (document.querySelector('.logo-main').style.fontSize = s.logoFontSize);
+    if (s.heroFontSize)    document.querySelector('.hero h1') && (document.querySelector('.hero h1').style.fontSize = s.heroFontSize);
+    if (s.cardTitleSize)   document.querySelectorAll('.card-title').forEach(el => el.style.fontSize = s.cardTitleSize);
+    if (s.labelSize)       document.querySelectorAll('label').forEach(el => el.style.fontSize = s.labelSize);
+    if (s.submitSize)      document.querySelector('.submit-btn') && (document.querySelector('.submit-btn').style.fontSize = s.submitSize);
+
+    // Header
+    if (s.logoMain)    document.querySelector('.logo-main').textContent = s.logoMain;
+    if (s.logoSub)     document.querySelector('.logo-sub').textContent  = s.logoSub;
+    if (s.headerIcon)  document.querySelector('.logo-icon').textContent  = s.headerIcon;
+
+    // Hero
+    if (s.heroTitle)   document.querySelector('.hero h1').textContent = s.heroTitle;
+    if (s.heroSub)     document.querySelector('.hero p').textContent  = s.heroSub;
+    if (s.heroShowSteps === false) show('.steps-row', false);
+
+    // Steps
+    if (s.steps && s.steps.length) {
+      const row = document.querySelector('.steps-row');
+      if (row) { row.innerHTML = s.steps.map(t=>`<div class="step-badge">${t}</div>`).join(''); }
+    }
+
+    // Gradient dir
+    if (s.heroGradientDir) {
+      const hero = document.querySelector('.hero');
+      if (hero) hero.style.background = `linear-gradient(${s.heroGradientDir}, var(--orange-dark), var(--orange) 60%, var(--orange-light))`;
+    }
+
+    // Card client
+    if (s.ccIcon)       document.querySelectorAll('.card-icon')[0] && (document.querySelectorAll('.card-icon')[0].textContent = s.ccIcon);
+    if (s.ccTitle)      document.querySelectorAll('.card-title')[0] && (document.querySelectorAll('.card-title')[0].textContent = s.ccTitle);
+    if (s.ccSub)        document.querySelectorAll('.card-subtitle')[0] && (document.querySelectorAll('.card-subtitle')[0].textContent = s.ccSub);
+    if (s.ccShow === false) document.querySelectorAll('.card')[0] && (document.querySelectorAll('.card')[0].style.display='none');
+    if (s.ccNameLabel)  document.querySelector('#client-name')?.previousElementSibling && (document.querySelector('label[for-client-name]') || document.querySelectorAll('.card')[0]?.querySelectorAll('label')[0])?.textContent && null;
+    if (s.ccNamePh && document.getElementById('client-name'))    document.getElementById('client-name').placeholder = s.ccNamePh;
+    if (s.ccPhonePh && document.getElementById('client-phone'))  document.getElementById('client-phone').placeholder = s.ccPhonePh;
+    if (s.ccPhoneShow === false) document.getElementById('client-phone')?.closest('.field') && (document.getElementById('client-phone').closest('.field').style.display='none');
+
+    // Card address
+    if (s.caFromPh && document.getElementById('from-address'))   document.getElementById('from-address').placeholder = s.caFromPh;
+    if (s.caToPh && document.getElementById('to-address'))       document.getElementById('to-address').placeholder   = s.caToPh;
+    if (s.caDividerIcon) document.querySelector('.divider-icon') && (document.querySelector('.divider-icon').textContent = s.caDividerIcon);
+    if (s.caFromVoice === false) document.querySelector('#from-address + .voice-btn') && (document.querySelector('#from-address').parentElement.querySelector('.voice-btn').style.display='none');
+    if (s.caToVoice   === false) document.querySelector('#to-address').parentElement?.querySelector('.voice-btn') && (document.querySelector('#to-address').parentElement.querySelector('.voice-btn').style.display='none');
+
+    // Card order
+    if (s.coDetailsPh && document.getElementById('order-details')) document.getElementById('order-details').placeholder = s.coDetailsPh;
+    if (s.coAmountShow === false) document.getElementById('amount')?.closest('.field') && (document.getElementById('amount').closest('.field').style.display='none');
+    if (s.coTimeShow   === false) document.getElementById('delivery-time')?.closest('.field') && (document.getElementById('delivery-time').closest('.field').style.display='none');
+    if (s.coNotesShow  === false) document.getElementById('notes')?.closest('.field') && (document.getElementById('notes').closest('.field').style.display='none');
+
+    // Order types chips
+    if (s.orderTypes && s.orderTypes.length) {
+      const chipsRow = document.getElementById('type-chips');
+      if (chipsRow) {
+        chipsRow.innerHTML = s.orderTypes.map((t,i) => `<button class="chip${i===0?' active':''}" onclick="selectChip(this)">${t}</button>`).join('');
+      }
+    }
+
+    // Submit btn
+    if (s.sbText && document.querySelector('.submit-btn span')) document.querySelectorAll('.submit-btn span')[0].textContent = s.sbText;
+    if (s.sbIcon && document.querySelector('.submit-btn span:last-child')) document.querySelectorAll('.submit-btn span')[1].textContent = s.sbIcon;
+
+    // Success
+    if (s.sbSuccessIcon)  document.querySelector('.success-icon') && (document.querySelector('.success-icon').textContent = s.sbSuccessIcon);
+    if (s.sbSuccessTitle) document.querySelector('.success-title') && (document.querySelector('.success-title').textContent = s.sbSuccessTitle);
+    if (s.sbCloseText)    document.querySelector('.success-close') && (document.querySelector('.success-close').textContent = s.sbCloseText);
+
+    // Footer
+    if (s.ftText)            document.querySelector('footer') && (document.querySelector('footer').textContent = s.ftText);
+    if (s.ftShow === false)  document.querySelector('footer') && (document.querySelector('footer').style.display='none');
+
+    // Max width
+    if (s.maxWidth) {
+      document.querySelectorAll('main, .header-inner').forEach(el => el.style.maxWidth = s.maxWidth);
+    }
+
+    // Section order & visibility
+    if (s.sectionOrder) {
+      const main = document.querySelector('main');
+      const cards = [...main.querySelectorAll('.card')];
+      const keyMap = { client: cards[0], address: cards[1], order: cards[2] };
+      s.sectionOrder.forEach(sec => {
+        if (keyMap[sec.key]) {
+          if (!sec.visible) keyMap[sec.key].style.display = 'none';
+          main.appendChild(keyMap[sec.key]);
+        }
+      });
+    }
+    // زر الإرسال دايماً آخر حاجة
+    const submitWrap = document.getElementById('submit-wrap');
+    if (submitWrap) document.querySelector('main').appendChild(submitWrap);
+
+    // Fields control
+    if (s.fieldsControl) {
+      const fc = s.fieldsControl;
+      const applyField = (id, cfg, labelFor) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const field = el.closest('.field');
+        if (!field) return;
+        if (cfg.show === false) { field.style.display='none'; return; }
+        if (cfg.ph) el.placeholder = cfg.ph;
+        // إجباري أو لا
+        const lbl = field.querySelector('label');
+        if (lbl) {
+          const reqSpan = lbl.querySelector('.req');
+          if (cfg.req && !reqSpan) {
+            lbl.insertAdjacentHTML('beforeend','<span class="req"> *</span>');
+          } else if (!cfg.req && reqSpan) {
+            reqSpan.remove();
+          }
+        }
+        el.dataset.required = cfg.req ? 'true' : 'false';
+      };
+      applyField('client-name',   fc.name);
+      applyField('client-phone',  fc.phone);
+      applyField('from-address',  fc.from);
+      applyField('to-address',    fc.to);
+      applyField('order-details', fc.details);
+      applyField('amount',        fc.amount);
+      applyField('delivery-time', fc.time);
+      applyField('notes',         fc.notes);
+      // نوع الطلب
+      if (fc.type && fc.type.show === false) {
+        const typeField = document.getElementById('type-chips');
+        if (typeField) typeField.closest('.field') && (typeField.closest('.field').style.display='none');
+      }
+    }
+
+  } catch(e) { console.error('Admin settings error:', e); }
+})();
+</script>

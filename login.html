@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الطيار — تسجيل الدخول</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',Arial,sans-serif!important}
+:root{
+  --orange:#FF4500;--orange-dark:#CC3700;--orange-light:#FF6A33;
+  --orange-glow:rgba(255,69,0,0.15);
+  --bg:#0D0D0D;--card:#1A1A1A;--border:#2A2A2A;
+  --text:#F0F0F0;--text-mid:#888;
+  --green:#22c55e;--red:#ef4444;
+}
+body{
+  background:var(--bg);color:var(--text);min-height:100vh;
+  display:flex;align-items:center;justify-content:center;
+  padding:20px;
+  background-image: radial-gradient(ellipse at 50% 0%, rgba(255,69,0,0.12) 0%, transparent 60%);
+}
+
+.login-wrap{width:100%;max-width:400px}
+
+/* LOGO */
+.logo-area{text-align:center;margin-bottom:32px}
+.logo-circle{
+  width:80px;height:80px;background:linear-gradient(135deg,var(--orange-dark),var(--orange));
+  border-radius:22px;display:flex;align-items:center;justify-content:center;
+  font-size:38px;margin:0 auto 14px;
+  box-shadow:0 8px 32px rgba(255,69,0,0.4);
+}
+.logo-name{font-size:28px;font-weight:900;color:var(--text)}
+.logo-sub{font-size:13px;color:var(--text-mid);font-weight:600;margin-top:3px}
+
+/* CARD */
+.login-card{
+  background:var(--card);border-radius:20px;padding:28px 24px;
+  border:1px solid var(--border);
+  box-shadow:0 20px 60px rgba(0,0,0,0.4);
+}
+.card-title{font-size:16px;font-weight:800;margin-bottom:20px;color:var(--text);text-align:center}
+
+/* FIELDS */
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.field label{font-size:12px;font-weight:700;color:var(--text-mid)}
+.field input{
+  background:#111;border:1.5px solid var(--border);border-radius:10px;
+  padding:12px 14px;font-size:14px;color:var(--text);outline:none;
+  direction:rtl;transition:border .2s,box-shadow .2s;
+  width:100%;box-sizing:border-box;
+}
+.field input:focus{border-color:var(--orange);box-shadow:0 0 0 3px var(--orange-glow)}
+.field input::placeholder{color:#444}
+
+/* SHOW PASS */
+.pass-wrap{position:relative;width:100%}
+.pass-wrap input{padding-left:42px;width:100%;box-sizing:border-box}
+.show-pass{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  background:transparent;border:none;cursor:pointer;font-size:16px;color:var(--text-mid);
+}
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:20px}
+.role-btn{
+  background:#111;border:1.5px solid var(--border);border-radius:10px;
+  padding:10px 6px;cursor:pointer;text-align:center;transition:all .15s;
+}
+.role-btn:hover{border-color:var(--orange);background:var(--orange-glow)}
+.role-btn.active{background:var(--orange-glow);border-color:var(--orange)}
+.role-icon{font-size:20px;display:block;margin-bottom:4px}
+.role-label{font-size:11px;font-weight:700;color:var(--text-mid)}
+.role-btn.active .role-label{color:var(--orange)}
+
+/* BTN */
+.login-btn{
+  width:100%;background:var(--orange);color:#fff;border:none;border-radius:12px;
+  padding:14px;font-size:16px;font-weight:900;cursor:pointer;
+  box-shadow:0 6px 20px rgba(255,69,0,0.38);transition:all .2s;
+  display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.login-btn:hover{background:var(--orange-dark);box-shadow:0 8px 26px rgba(255,69,0,.48)}
+.login-btn:active{transform:scale(.98)}
+.login-btn.loading{opacity:.7;pointer-events:none}
+
+/* ERROR */
+.error-msg{
+  background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.25);
+  border-radius:10px;padding:10px 14px;font-size:13px;font-weight:700;
+  color:var(--red);text-align:center;margin-bottom:14px;display:none;
+}
+.error-msg.show{display:block}
+
+/* HINT */
+.hint{font-size:11px;color:var(--text-mid);text-align:center;margin-top:16px;font-weight:500}
+
+/* SHOW PASS */
+.pass-wrap{position:relative}
+.pass-wrap input{padding-left:42px}
+.show-pass{
+  position:absolute;left:12px;top:50%;transform:translateY(-50%);
+  background:transparent;border:none;cursor:pointer;font-size:16px;color:var(--text-mid);
+}
+</style>
+</head>
+<body>
+
+<div class="login-wrap">
+
+  <div class="logo-area">
+    <div class="logo-circle">🛵</div>
+    <div class="logo-name">الطيار</div>
+    <div class="logo-sub">DELIVERY SYSTEM</div>
+  </div>
+
+  <div class="login-card">
+    <div class="card-title">🔐 تسجيل الدخول</div>
+
+    <!-- اختيار الدور -->
+    <div class="role-grid" id="role-grid">
+      <div class="role-btn active" data-role="super" onclick="selectRole(this)">
+        <span class="role-icon">👑</span>
+        <span class="role-label">سوبر أدمن</span>
+      </div>
+      <div class="role-btn" data-role="admin" onclick="selectRole(this)">
+        <span class="role-icon">🧑‍💼</span>
+        <span class="role-label">أدمن</span>
+      </div>
+      <div class="role-btn" data-role="driver" onclick="selectRole(this)">
+        <span class="role-icon">🛵</span>
+        <span class="role-label">مندوب</span>
+      </div>
+    </div>
+
+    <div class="error-msg" id="error-msg">❌ اسم المستخدم أو الباسورد غلط</div>
+
+    <div class="field">
+      <label>اسم المستخدم</label>
+      <input type="text" id="username" placeholder="أدخل اسم المستخدم" autocomplete="off" onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+
+    <div class="field">
+      <label>كلمة المرور</label>
+      <div class="pass-wrap">
+        <input type="password" id="password" placeholder="أدخل كلمة المرور" onkeydown="if(event.key==='Enter')doLogin()">
+        <button class="show-pass" onclick="togglePass()" title="إظهار/إخفاء">👁️</button>
+      </div>
+    </div>
+
+    <button class="login-btn" id="login-btn" onclick="doLogin()">
+      <span>دخول</span>
+      <span>🚀</span>
+    </button>
+
+    <div class="hint">كل دور له صلاحيات مختلفة</div>
+  </div>
+
+</div>
+
+<script>
+// =========================================
+// 🔑 USERS DATABASE
+// غيّر البيانات دي زي ما تحب
+// =========================================
+const USERS = [
+  {
+    username: 'superadmin',
+    password: 'super@2025',
+    role: 'super',
+    name: 'سوبر أدمن',
+    redirect: 'admin.html',        // بعد الدخول يروح فين
+    canAccess: ['admin.html', 'orders.html', 'index.html']
+  },
+  {
+    username: 'admin',
+    password: 'admin@2025',
+    role: 'admin',
+    name: 'الأدمن',
+    redirect: 'orders.html',
+    canAccess: ['orders.html', 'index.html']
+    // مش يقدر يفتح admin.html
+  },
+  {
+    username: 'driver',
+    password: 'driver@2025',
+    role: 'driver',
+    name: 'المندوب',
+    redirect: 'orders.html',
+    canAccess: ['orders.html']
+    // يفتح orders بس
+  }
+];
+// =========================================
+
+let selectedRole = 'super';
+
+function selectRole(btn) {
+  document.querySelectorAll('.role-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedRole = btn.dataset.role;
+  document.getElementById('error-msg').classList.remove('show');
+}
+
+function togglePass() {
+  const inp = document.getElementById('password');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function doLogin() {
+  const username = document.getElementById('username').value.trim();
+  const password = document.getElementById('password').value.trim();
+  const errorEl  = document.getElementById('error-msg');
+  const btn      = document.getElementById('login-btn');
+
+  errorEl.classList.remove('show');
+
+  if (!username || !password) {
+    errorEl.textContent = '⚠️ من فضلك ادخل اسم المستخدم والباسورد';
+    errorEl.classList.add('show');
+    return;
+  }
+
+  btn.classList.add('loading');
+  btn.querySelector('span').textContent = 'جاري التحقق...';
+
+  // Simulate slight delay for UX
+  setTimeout(() => {
+    const user = USERS.find(u =>
+      u.username === username &&
+      u.password === password &&
+      u.role     === selectedRole
+    );
+
+    if (!user) {
+      errorEl.textContent = '❌ اسم المستخدم أو الباسورد أو الدور غلط';
+      errorEl.classList.add('show');
+      btn.classList.remove('loading');
+      btn.querySelector('span').textContent = 'دخول';
+      return;
+    }
+
+    // Save session
+    sessionStorage.setItem('altayar_user', JSON.stringify({
+      username: user.username,
+      name: user.name,
+      role: user.role,
+      canAccess: user.canAccess,
+      loginTime: Date.now()
+    }));
+
+    // Redirect
+    window.location.href = user.redirect;
+  }, 600);
+}
+</script>
+
+</body>
+</html>

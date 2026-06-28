@@ -1,0 +1,1218 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>الطيار - لوحة التحكم</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Cairo',Arial,sans-serif!important}
+:root{
+  --orange:#FF4500;--orange-dark:#CC3700;--orange-light:#FF6A33;
+  --orange-glow:rgba(255,69,0,0.12);
+  --bg:#0D0D0D;--panel:#161616;--card:#1E1E1E;--card2:#252525;
+  --border:#2E2E2E;--border2:#3A3A3A;
+  --text:#F0F0F0;--text-mid:#999;--text-dim:#666;
+  --green:#22c55e;--yellow:#f59e0b;--blue:#3b82f6;--red:#ef4444;
+  --radius:14px;
+}
+body{background:var(--bg);color:var(--text);min-height:100vh;direction:rtl;display:flex;flex-direction:column}
+
+/* HEADER */
+header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));padding:0;position:sticky;top:0;z-index:200;box-shadow:0 2px 24px rgba(255,69,0,.5)}
+.header-inner{max-width:1400px;margin:auto;display:flex;align-items:center;justify-content:space-between;padding:12px 20px}
+.logo{display:flex;align-items:center;gap:10px}
+.logo-icon{width:38px;height:38px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:19px}
+.logo .t1{font-size:18px;font-weight:900;color:#fff}
+.logo .t2{font-size:10px;color:rgba(255,255,255,.8);font-weight:600;letter-spacing:1px}
+.header-actions{display:flex;gap:8px}
+.hbtn{border:none;border-radius:10px;padding:8px 18px;font-size:13px;font-weight:800;cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:6px}
+.hbtn-save{background:#fff;color:var(--orange)}
+.hbtn-save:hover{background:var(--orange-glow);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.hbtn-preview{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.hbtn-preview:hover{background:rgba(255,255,255,.25)}
+.hbtn-orders{background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.25)}
+.hbtn-orders:hover{background:rgba(255,255,255,.25)}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden;max-width:1400px;margin:0 auto;width:100%;padding:0}
+
+/* SIDEBAR */
+.sidebar{width:300px;background:var(--panel);border-left:1px solid var(--border);overflow-y:auto;flex-shrink:0}
+.sidebar-nav{display:flex;flex-direction:column;gap:2px;padding:14px 10px}
+.nav-section{font-size:10px;font-weight:800;color:var(--text-dim);letter-spacing:1.5px;padding:10px 8px 4px;text-transform:uppercase}
+.nav-btn{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:10px;cursor:pointer;transition:all .15s;border:none;background:transparent;color:var(--text-mid);font-size:13px;font-weight:700;width:100%;text-align:right}
+.nav-btn:hover{background:var(--card);color:var(--text)}
+.nav-btn.active{background:var(--orange-glow);color:var(--orange);border:1px solid rgba(255,69,0,.2)}
+.nav-icon{font-size:16px;flex-shrink:0}
+
+/* EDITOR AREA */
+.editor-area{flex:1;overflow-y:auto;padding:20px}
+
+/* SECTION PANEL */
+.section-panel{display:none}
+.section-panel.active{display:block}
+
+.panel-title{font-size:18px;font-weight:900;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.panel-title .icon{font-size:20px}
+
+/* CONTROL GROUPS */
+.ctrl-group{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:14px;overflow:hidden}
+.ctrl-group-header{padding:12px 16px;background:var(--card2);border-bottom:1px solid var(--border);font-size:13px;font-weight:800;color:var(--text);display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+.ctrl-group-header:hover{background:#2A2A2A}
+.ctrl-group-body{padding:16px;display:flex;flex-direction:column;gap:12px}
+
+/* CONTROLS */
+.ctrl-row{display:flex;flex-direction:column;gap:5px}
+.ctrl-label{font-size:12px;font-weight:700;color:var(--text-mid)}
+.ctrl-input{background:var(--bg);border:1.5px solid var(--border2);border-radius:8px;padding:8px 12px;font-size:13px;color:var(--text);outline:none;direction:rtl;width:100%;transition:border .15s}
+.ctrl-input:focus{border-color:var(--orange)}
+.ctrl-input::placeholder{color:var(--text-dim)}
+textarea.ctrl-input{min-height:70px;resize:vertical}
+
+.ctrl-row-2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.ctrl-row-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+
+/* COLOR PICKER */
+.color-row{display:flex;align-items:center;gap:8px}
+.color-input{width:38px;height:38px;border:2px solid var(--border2);border-radius:8px;padding:2px;background:var(--bg);cursor:pointer;flex-shrink:0}
+.color-hex{flex:1}
+
+/* TOGGLE */
+.toggle-row{display:flex;align-items:center;justify-content:space-between}
+.toggle-label-text{font-size:13px;font-weight:700;color:var(--text)}
+.toggle{position:relative;width:44px;height:24px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.toggle-slider{position:absolute;inset:0;background:var(--border2);border-radius:50px;cursor:pointer;transition:.2s}
+.toggle-slider:before{content:'';position:absolute;width:18px;height:18px;right:3px;top:3px;background:#fff;border-radius:50%;transition:.2s}
+.toggle input:checked + .toggle-slider{background:var(--orange)}
+.toggle input:checked + .toggle-slider:before{transform:translateX(-20px)}
+
+/* RANGE */
+.range-row{display:flex;flex-direction:column;gap:5px}
+.range-header{display:flex;justify-content:space-between;align-items:center}
+.range-val{font-size:13px;font-weight:800;color:var(--orange)}
+input[type=range]{width:100%;accent-color:var(--orange);height:4px}
+
+/* SELECT */
+select.ctrl-input{cursor:pointer}
+
+/* CHIP EDITOR */
+.chip-editor{display:flex;flex-direction:column;gap:8px}
+.chip-item{display:flex;align-items:center;gap:8px;background:var(--bg);border:1px solid var(--border2);border-radius:8px;padding:8px 10px}
+.chip-item input{flex:1;background:transparent;border:none;color:var(--text);font-size:13px;outline:none;direction:rtl}
+.chip-del{background:rgba(239,68,68,.15);border:none;border-radius:6px;width:28px;height:28px;color:var(--red);cursor:pointer;font-size:14px;flex-shrink:0}
+.chip-del:hover{background:var(--red);color:#fff}
+.add-chip-btn{background:var(--orange-glow);border:1.5px dashed rgba(255,69,0,.3);border-radius:8px;padding:8px;color:var(--orange);font-size:13px;font-weight:700;cursor:pointer;text-align:center}
+.add-chip-btn:hover{background:rgba(255,69,0,.2)}
+
+/* SECTION REORDER */
+.section-list{display:flex;flex-direction:column;gap:8px}
+.section-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;cursor:grab}
+.section-item:active{cursor:grabbing;opacity:.7}
+.drag-handle{font-size:16px;color:var(--text-dim)}
+.section-item-name{font-size:13px;font-weight:700;flex:1}
+.section-visible{display:flex;align-items:center;gap:6px}
+.vis-label{font-size:11px;color:var(--text-mid)}
+
+/* SAVE TOAST */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:12px 24px;border-radius:50px;font-size:14px;font-weight:800;z-index:999;display:none;white-space:nowrap;box-shadow:0 4px 20px rgba(34,197,94,.4)}
+.toast.show{display:block;animation:toast-in .3s ease}
+@keyframes toast-in{from{transform:translateX(-50%) translateY(20px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}
+
+/* PREVIEW BUTTON BOTTOM */
+.preview-bar{background:var(--panel);border-top:1px solid var(--border);padding:12px 20px;display:flex;gap:10px;justify-content:center}
+.preview-link{display:flex;align-items:center;gap:6px;padding:9px 22px;border-radius:10px;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;border:none;transition:all .15s}
+.pl-index{background:var(--orange);color:#fff}
+.pl-index:hover{background:var(--orange-dark)}
+.pl-orders{background:var(--card2);color:var(--text);border:1px solid var(--border)}
+.pl-orders:hover{background:var(--card)}
+
+@media(max-width:768px){
+  .layout{flex-direction:column}
+  .sidebar{width:100%;border-left:none;border-bottom:1px solid var(--border)}
+  .sidebar-nav{flex-direction:row;flex-wrap:wrap;padding:8px}
+  .nav-section{display:none}
+  .nav-btn{padding:7px 12px;font-size:12px}
+}
+</style>
+</head>
+<body>
+<script>
+(function(){
+  // لو بيتفتح locally (file://) اعمل session تجريبي تلقائي
+  if (window.location.protocol === 'file:') {
+    if (!sessionStorage.getItem('altayar_user')) {
+      sessionStorage.setItem('altayar_user', JSON.stringify({
+        username:'superadmin', name:'سوبر أدمن', role:'super',
+        canAccess:['admin.html','orders.html','index.html']
+      }));
+    }
+  }
+  var u = sessionStorage.getItem('altayar_user');
+  if (!u) { window.location.href='login.html'; return; }
+  var user = JSON.parse(u);
+  if (!user.canAccess || user.canAccess.indexOf('admin.html') === -1) {
+    alert('⛔ مش معاك صلاحية لهذه الصفحة');
+    window.location.href='login.html'; return;
+  }
+  window.__altayar_user = user;
+})();
+</script>
+
+<header>
+  <div class="header-inner">
+    <div class="logo">
+      <div class="logo-icon">⚙️</div>
+      <div>
+        <div class="t1">لوحة التحكم</div>
+        <div class="t2">ADMIN PANEL</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <span id="user-badge" style="background:rgba(255,255,255,0.15);border-radius:50px;padding:6px 14px;font-size:12px;font-weight:700;color:#fff"></span>
+      <button class="hbtn hbtn-orders" onclick="window.open('orders.html')">📋 الأوردرات</button>
+      <button class="hbtn hbtn-preview" onclick="window.open('index.html')">👁️ معاينة</button>
+      <button class="hbtn hbtn-save" onclick="saveAll()">💾 حفظ التغييرات</button>
+      <button onclick="doLogout()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:8px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🚪 خروج</button>
+    </div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- SIDEBAR NAV -->
+  <div class="sidebar">
+    <div class="sidebar-nav">
+      <div class="nav-section">الصفحة</div>
+      <button class="nav-btn active" onclick="showPanel('general',this)"><span class="nav-icon">🌐</span>عام</button>
+      <button class="nav-btn" onclick="showPanel('colors',this)"><span class="nav-icon">🎨</span>الألوان</button>
+      <button class="nav-btn" onclick="showPanel('fonts',this)"><span class="nav-icon">🔤</span>الخطوط</button>
+
+      <div class="nav-section">المحتوى</div>
+      <button class="nav-btn" onclick="showPanel('header',this)"><span class="nav-icon">🔝</span>الهيدر</button>
+      <button class="nav-btn" onclick="showPanel('hero',this)"><span class="nav-icon">🦸</span>البانر</button>
+      <button class="nav-btn" onclick="showPanel('steps',this)"><span class="nav-icon">📋</span>خطوات الطلب</button>
+
+      <div class="nav-section">الكروت</div>
+      <button class="nav-btn" onclick="showPanel('card-client',this)"><span class="nav-icon">👤</span>كارت العميل</button>
+      <button class="nav-btn" onclick="showPanel('card-address',this)"><span class="nav-icon">📍</span>كارت العناوين</button>
+      <button class="nav-btn" onclick="showPanel('card-order',this)"><span class="nav-icon">📦</span>كارت الطلب</button>
+
+      <div class="nav-section">الأزرار</div>
+      <button class="nav-btn" onclick="showPanel('chips',this)"><span class="nav-icon">🏷️</span>أنواع الطلبات</button>
+      <button class="nav-btn" onclick="showPanel('submit-btn',this)"><span class="nav-icon">🚀</span>زر الإرسال</button>
+      <button class="nav-btn" onclick="showPanel('footer',this)"><span class="nav-icon">🔻</span>الفوتر</button>
+
+      <div class="nav-section">ترتيب</div>
+      <button class="nav-btn" onclick="showPanel('order-sections',this)"><span class="nav-icon">↕️</span>ترتيب الأقسام</button>
+
+      <div class="nav-section">المستخدمين</div>
+      <button class="nav-btn" onclick="showPanel('users',this)"><span class="nav-icon">👥</span>إدارة المستخدمين</button>
+
+      <div class="nav-section">واتساب</div>
+      <button class="nav-btn" onclick="showPanel('whatsapp',this)"><span class="nav-icon">💬</span>رسالة الواتساب</button>
+    </div>
+  </div>
+
+  <!-- EDITOR PANELS -->
+  <div class="editor-area">
+
+    <!-- GENERAL -->
+    <div class="section-panel active" id="panel-general">
+      <div class="panel-title"><span class="icon">🌐</span> إعدادات عامة</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">عنوان التاب (Tab Title)</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">عنوان الصفحة في المتصفح</div>
+            <input class="ctrl-input" id="g-page-title" value="الطيار ديليفري - اطلب دلوقتي">
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">حدود العرض</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">أقصى عرض للمحتوى (px)</div>
+            <input class="ctrl-input" id="g-max-width" type="number" value="640">
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">الفوتر</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">نص الفوتر</div>
+            <input class="ctrl-input" id="g-footer" value="الطيار ديليفري © 2025 — وصلك في ثواني ✈️">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار الفوتر</span>
+            <label class="toggle"><input type="checkbox" id="g-footer-show" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COLORS -->
+    <div class="section-panel" id="panel-colors">
+      <div class="panel-title"><span class="icon">🎨</span> الألوان</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">الألوان الرئيسية</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row-2">
+            <div class="ctrl-row">
+              <div class="ctrl-label">اللون الأساسي (أورنج)</div>
+              <div class="color-row">
+                <input type="color" class="color-input" id="c-orange" value="#FF4500" oninput="syncColor('c-orange','c-orange-hex')">
+                <input class="ctrl-input color-hex" id="c-orange-hex" value="#FF4500" oninput="syncHex('c-orange-hex','c-orange')">
+              </div>
+            </div>
+            <div class="ctrl-row">
+              <div class="ctrl-label">لون داكن</div>
+              <div class="color-row">
+                <input type="color" class="color-input" id="c-orange-dark" value="#CC3700" oninput="syncColor('c-orange-dark','c-orange-dark-hex')">
+                <input class="ctrl-input color-hex" id="c-orange-dark-hex" value="#CC3700" oninput="syncHex('c-orange-dark-hex','c-orange-dark')">
+              </div>
+            </div>
+            <div class="ctrl-row">
+              <div class="ctrl-label">لون فاتح</div>
+              <div class="color-row">
+                <input type="color" class="color-input" id="c-orange-light" value="#FF6A33" oninput="syncColor('c-orange-light','c-orange-light-hex')">
+                <input class="ctrl-input color-hex" id="c-orange-light-hex" value="#FF6A33" oninput="syncHex('c-orange-light-hex','c-orange-light')">
+              </div>
+            </div>
+            <div class="ctrl-row">
+              <div class="ctrl-label">خلفية الصفحة</div>
+              <div class="color-row">
+                <input type="color" class="color-input" id="c-bg" value="#FFF5F2" oninput="syncColor('c-bg','c-bg-hex')">
+                <input class="ctrl-input color-hex" id="c-bg-hex" value="#FFF5F2" oninput="syncHex('c-bg-hex','c-bg')">
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FONTS -->
+    <div class="section-panel" id="panel-fonts">
+      <div class="panel-title"><span class="icon">🔤</span> الخطوط والأحجام</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">أحجام النصوص</div>
+        <div class="ctrl-group-body">
+          <div class="range-row">
+            <div class="range-header"><span class="ctrl-label">حجم اسم اللوجو</span><span class="range-val" id="v-logo-size">24px</span></div>
+            <input type="range" min="16" max="40" value="24" oninput="this.previousElementSibling.querySelector('.range-val').textContent=this.value+'px'" id="f-logo-size">
+          </div>
+          <div class="range-row">
+            <div class="range-header"><span class="ctrl-label">حجم عنوان البانر</span><span class="range-val" id="v-hero-size">21px</span></div>
+            <input type="range" min="14" max="36" value="21" oninput="document.getElementById('v-hero-size').textContent=this.value+'px'" id="f-hero-size">
+          </div>
+          <div class="range-row">
+            <div class="range-header"><span class="ctrl-label">حجم عناوين الكروت</span><span class="range-val" id="v-card-title-size">15px</span></div>
+            <input type="range" min="12" max="24" value="15" oninput="document.getElementById('v-card-title-size').textContent=this.value+'px'" id="f-card-title-size">
+          </div>
+          <div class="range-row">
+            <div class="range-header"><span class="ctrl-label">حجم الـ labels</span><span class="range-val" id="v-label-size">13px</span></div>
+            <input type="range" min="10" max="18" value="13" oninput="document.getElementById('v-label-size').textContent=this.value+'px'" id="f-label-size">
+          </div>
+          <div class="range-row">
+            <div class="range-header"><span class="ctrl-label">حجم نص زر الإرسال</span><span class="range-val" id="v-submit-size">17px</span></div>
+            <input type="range" min="12" max="26" value="17" oninput="document.getElementById('v-submit-size').textContent=this.value+'px'" id="f-submit-size">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HEADER -->
+    <div class="section-panel" id="panel-header">
+      <div class="panel-title"><span class="icon">🔝</span> الهيدر</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">محتوى الهيدر</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">الاسم الكبير (اللوجو)</div>
+            <input class="ctrl-input" id="h-logo-main" value="الطيار">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">الاسم الصغير (subtitle)</div>
+            <input class="ctrl-input" id="h-logo-sub" value="DELIVERY">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">أيقونة الهيدر (إيموجي)</div>
+            <input class="ctrl-input" id="h-icon" value="🛵">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <div class="section-panel" id="panel-hero">
+      <div class="panel-title"><span class="icon">🦸</span> البانر الرئيسي</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">نصوص البانر</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">العنوان الكبير</div>
+            <input class="ctrl-input" id="hero-title" value="اطلب دلوقتي ووصلك بسرعة ✈️">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">النص الصغير</div>
+            <input class="ctrl-input" id="hero-sub" value="أدخل بيانات طلبك وهنوصله لحد بابك">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار خطوات الطلب</span>
+            <label class="toggle"><input type="checkbox" id="hero-show-steps" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">تدرج ألوان البانر</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">اتجاه التدرج</div>
+            <select class="ctrl-input" id="hero-gradient-dir">
+              <option value="135deg">قطري (افتراضي)</option>
+              <option value="to left">من اليمين لليسار</option>
+              <option value="to bottom">من فوق لتحت</option>
+              <option value="to right">من اليسار لليمين</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STEPS -->
+    <div class="section-panel" id="panel-steps">
+      <div class="panel-title"><span class="icon">📋</span> خطوات الطلب</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">الخطوات (اضغط على النص لتعديله)</div>
+        <div class="ctrl-group-body">
+          <div class="chip-editor" id="steps-editor">
+            <div class="chip-item"><input value="📋 بياناتك"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="📍 العناوين"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="📦 الطلب"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="🚀 إرسال"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+          </div>
+          <button class="add-chip-btn" onclick="addChip('steps-editor')">+ إضافة خطوة</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD CLIENT -->
+    <div class="section-panel" id="panel-card-client">
+      <div class="panel-title"><span class="icon">👤</span> كارت بيانات العميل</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">محتوى الكارت</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">أيقونة الكارت</div>
+            <input class="ctrl-input" id="cc-icon" value="👤">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">عنوان الكارت</div>
+            <input class="ctrl-input" id="cc-title" value="بيانات العميل">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">الوصف الصغير</div>
+            <input class="ctrl-input" id="cc-sub" value="الاسم ورقم التليفون">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار الكارت</span>
+            <label class="toggle"><input type="checkbox" id="cc-show" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">حقول الكارت</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">label حقل الاسم</div>
+            <input class="ctrl-input" id="cc-name-label" value="الاسم">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">placeholder حقل الاسم</div>
+            <input class="ctrl-input" id="cc-name-ph" value="اسم العميل">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">label حقل التليفون</div>
+            <input class="ctrl-input" id="cc-phone-label" value="التليفون">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">placeholder حقل التليفون</div>
+            <input class="ctrl-input" id="cc-phone-ph" value="01xxxxxxxxx">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار حقل التليفون</span>
+            <label class="toggle"><input type="checkbox" id="cc-phone-show" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD ADDRESS -->
+    <div class="section-panel" id="panel-card-address">
+      <div class="panel-title"><span class="icon">📍</span> كارت العناوين</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">محتوى الكارت</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">أيقونة الكارت</div>
+            <input class="ctrl-input" id="ca-icon" value="📍">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">عنوان الكارت</div>
+            <input class="ctrl-input" id="ca-title" value="العناوين">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">الوصف الصغير</div>
+            <input class="ctrl-input" id="ca-sub" value="من فين لفين">
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">عنوان الاستلام</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">label</div>
+            <input class="ctrl-input" id="ca-from-label" value="📦 عنوان الاستلام">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">placeholder</div>
+            <input class="ctrl-input" id="ca-from-ph" value="مثال: محل النور، شارع الجمهورية">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">hint (نص المساعدة)</div>
+            <input class="ctrl-input" id="ca-from-hint" value="💡 اضغط المايك وقول العنوان بصوتك">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار زر الصوت</span>
+            <label class="toggle"><input type="checkbox" id="ca-from-voice" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">عنوان التوصيل</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">label</div>
+            <input class="ctrl-input" id="ca-to-label" value="🏠 عنوان التوصيل">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">placeholder</div>
+            <input class="ctrl-input" id="ca-to-ph" value="مثال: شارع النيل، برج الياسمين، شقة 12">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">hint</div>
+            <input class="ctrl-input" id="ca-to-hint" value="💡 اكتب يدوي أو استخدم المايك">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار زر الصوت</span>
+            <label class="toggle"><input type="checkbox" id="ca-to-voice" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">أيقونة الفاصل بين العناوين</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">الأيقونة</div>
+            <input class="ctrl-input" id="ca-divider-icon" value="⬇️">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- CARD ORDER -->
+    <div class="section-panel" id="panel-card-order">
+      <div class="panel-title"><span class="icon">📦</span> كارت تفاصيل الطلب</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">محتوى الكارت</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">أيقونة الكارت</div>
+            <input class="ctrl-input" id="co-icon" value="📦">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">عنوان الكارت</div>
+            <input class="ctrl-input" id="co-title" value="تفاصيل الطلب">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">الوصف الصغير</div>
+            <input class="ctrl-input" id="co-sub" value="إيه اللي هيتبعت؟">
+          </div>
+        </div>
+      </div>
+
+      <!-- جدول تحكم الحقول -->
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">🎛️ تحكم كامل في كل حقل</div>
+        <div class="ctrl-group-body">
+          <table style="width:100%;border-collapse:collapse;font-size:12px">
+            <thead>
+              <tr style="color:var(--text-dim);font-weight:700;border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px">الحقل</td>
+                <td style="padding:8px 4px;text-align:center">ظاهر</td>
+                <td style="padding:8px 4px;text-align:center">إجباري</td>
+                <td style="padding:8px 4px">البيانك</td>
+              </tr>
+            </thead>
+            <tbody id="fields-control-table">
+              <!-- client fields -->
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">👤 اسم العميل</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-name-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-name-req" checked><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-name-ph" value="اسم العميل" style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">📞 التليفون</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-phone-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-phone-req" checked><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-phone-ph" value="01xxxxxxxxx" style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+              <!-- address fields -->
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">📦 عنوان الاستلام</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-from-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-from-req" checked><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-from-ph" value="عنوان الاستلام" style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">🏠 عنوان التوصيل</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-to-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-to-req" checked><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-to-ph" value="عنوان التوصيل" style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+              <!-- order fields -->
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">📋 تفاصيل الطلب</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-details-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-details-req" checked><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-details-ph" value="تفاصيل الطلب..." style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">💰 المبلغ</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-amount-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-amount-req"><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-amount-ph" value="0" style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">🕐 وقت التوصيل</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-time-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-time-req"><span class="toggle-slider"></span></label></td>
+                <td><span style="color:var(--text-dim);font-size:11px">قايمة اختيار</span></td>
+              </tr>
+              <tr style="border-bottom:1px solid var(--border)">
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">🏷️ نوع الطلب</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-type-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-type-req"><span class="toggle-slider"></span></label></td>
+                <td><span style="color:var(--text-dim);font-size:11px">chips</span></td>
+              </tr>
+              <tr>
+                <td style="padding:8px 4px;font-weight:700;color:var(--text)">📝 ملاحظات</td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-notes-show" checked><span class="toggle-slider"></span></label></td>
+                <td style="text-align:center"><label class="toggle" style="margin:auto"><input type="checkbox" id="fc-notes-req"><span class="toggle-slider"></span></label></td>
+                <td><input class="ctrl-input" id="fc-notes-ph" value="ملاحظات إضافية..." style="padding:6px 10px;font-size:12px"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- CHIPS -->
+    <div class="section-panel" id="panel-chips">
+      <div class="panel-title"><span class="icon">🏷️</span> أنواع الطلبات</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">اضغط على أي نوع لتعديله أو امسحه</div>
+        <div class="ctrl-group-body">
+          <div class="chip-editor" id="chips-editor">
+            <div class="chip-item"><input value="🛍️ مشتريات"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="🍕 أكل وشرب"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="💊 أدوية"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="📄 مستندات"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+            <div class="chip-item"><input value="🔧 أخرى"><button class="chip-del" onclick="delChip(this)">✕</button></div>
+          </div>
+          <button class="add-chip-btn" onclick="addChip('chips-editor')">+ إضافة نوع</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBMIT BTN -->
+    <div class="section-panel" id="panel-submit-btn">
+      <div class="panel-title"><span class="icon">🚀</span> زر الإرسال</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">نص الزر</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">النص</div>
+            <input class="ctrl-input" id="sb-text" value="إرسال الطلب">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">الأيقونة</div>
+            <input class="ctrl-input" id="sb-icon" value="🚀">
+          </div>
+        </div>
+      </div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">رسالة النجاح</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">أيقونة النجاح</div>
+            <input class="ctrl-input" id="sb-success-icon" value="✅">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">عنوان رسالة النجاح</div>
+            <input class="ctrl-input" id="sb-success-title" value="تم استلام طلبك! 🎉">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">نص زر الإغلاق</div>
+            <input class="ctrl-input" id="sb-close-text" value="طلب جديد">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="section-panel" id="panel-footer">
+      <div class="panel-title"><span class="icon">🔻</span> الفوتر</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">نص الفوتر</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">النص</div>
+            <input class="ctrl-input" id="ft-text" value="الطيار ديليفري © 2025 — وصلك في ثواني ✈️">
+          </div>
+          <div class="toggle-row">
+            <span class="toggle-label-text">إظهار الفوتر</span>
+            <label class="toggle"><input type="checkbox" id="ft-show" checked><span class="toggle-slider"></span></label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SECTION ORDER -->
+    <div class="section-panel" id="panel-order-sections">
+      <div class="panel-title"><span class="icon">↕️</span> ترتيب الأقسام</div>
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">اسحب لتغيير الترتيب — فعّل/عطّل أي قسم</div>
+        <div class="ctrl-group-body">
+          <div class="section-list" id="sections-sortable">
+            <div class="section-item" draggable="true" data-section="client">
+              <span class="drag-handle">⠿</span>
+              <span class="section-item-name">👤 بيانات العميل</span>
+              <div class="section-visible">
+                <span class="vis-label">ظاهر</span>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="section-item" draggable="true" data-section="address">
+              <span class="drag-handle">⠿</span>
+              <span class="section-item-name">📍 العناوين</span>
+              <div class="section-visible">
+                <span class="vis-label">ظاهر</span>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+            <div class="section-item" draggable="true" data-section="order">
+              <span class="drag-handle">⠿</span>
+              <span class="section-item-name">📦 تفاصيل الطلب</span>
+              <div class="section-visible">
+                <span class="vis-label">ظاهر</span>
+                <label class="toggle"><input type="checkbox" checked><span class="toggle-slider"></span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- USERS PANEL -->
+    <div class="section-panel" id="panel-users">
+      <div class="panel-title"><span class="icon">👥</span> إدارة المستخدمين</div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">⚠️ التغييرات بتتحفظ في المتصفح — بعد التعديل انسخ الكود لـ login.html</div>
+        <div class="ctrl-group-body">
+          <div id="users-list"></div>
+          <button class="toggle-form-btn" onclick="toggleAddForm()">➕ إضافة مستخدم جديد</button>
+
+          <div class="add-user-form" id="add-user-form">
+            <div class="form-row">
+              <div class="ctrl-row">
+                <div class="ctrl-label">اسم المستخدم</div>
+                <input class="ctrl-input" id="new-username" placeholder="username">
+              </div>
+              <div class="ctrl-row">
+                <div class="ctrl-label">كلمة المرور</div>
+                <input class="ctrl-input" id="new-password" placeholder="password@2025">
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="ctrl-row">
+                <div class="ctrl-label">الاسم بالعربي</div>
+                <input class="ctrl-input" id="new-name" placeholder="مثال: أحمد المندوب">
+              </div>
+              <div class="ctrl-row">
+                <div class="ctrl-label">الدور</div>
+                <select class="ctrl-input" id="new-role">
+                  <option value="super">👑 سوبر أدمن</option>
+                  <option value="admin">🧑‍💼 أدمن</option>
+                  <option value="driver" selected>🛵 مندوب</option>
+                </select>
+              </div>
+            </div>
+            <button class="add-user-btn-main" onclick="addUser()">✅ إضافة المستخدم</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">📋 كود login.html الجاهز للنسخ</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">انسخ الكود ده وحطه في login.html بدل const USERS</div>
+            <textarea class="ctrl-input" id="users-code-output" style="min-height:160px;font-size:11px;direction:ltr" readonly></textarea>
+          </div>
+          <button class="add-user-btn-main" onclick="copyUsersCode()">📋 نسخ الكود</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- WHATSAPP PANEL -->
+    <div class="section-panel" id="panel-whatsapp">
+      <div class="panel-title"><span class="icon">💬</span> رسالة الواتساب</div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">🎛️ اختار إيه اللي يتبعت في الرسالة</div>
+        <div class="ctrl-group-body">
+          <div class="toggle-row"><span class="toggle-label-text">📋 هيدر الرسالة (اسم الشركة)</span><label class="toggle"><input type="checkbox" id="wa-header" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">👤 اسم العميل</span><label class="toggle"><input type="checkbox" id="wa-name" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">📞 التليفون</span><label class="toggle"><input type="checkbox" id="wa-phone" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">📦 عنوان الاستلام</span><label class="toggle"><input type="checkbox" id="wa-from" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">🏠 عنوان التوصيل</span><label class="toggle"><input type="checkbox" id="wa-to" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">📋 تفاصيل الطلب</span><label class="toggle"><input type="checkbox" id="wa-details" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">🏷️ نوع الطلب</span><label class="toggle"><input type="checkbox" id="wa-type" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">💰 المبلغ</span><label class="toggle"><input type="checkbox" id="wa-amount" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">🕐 وقت التوصيل</span><label class="toggle"><input type="checkbox" id="wa-time" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">📝 الملاحظات</span><label class="toggle"><input type="checkbox" id="wa-notes" checked><span class="toggle-slider"></span></label></div>
+          <div class="toggle-row"><span class="toggle-label-text">✅ فوتر الرسالة</span><label class="toggle"><input type="checkbox" id="wa-footer" checked><span class="toggle-slider"></span></label></div>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">✏️ تخصيص النصوص</div>
+        <div class="ctrl-group-body">
+          <div class="ctrl-row">
+            <div class="ctrl-label">هيدر الرسالة</div>
+            <input class="ctrl-input" id="wa-header-text" value="🛵 *الطيار ديليفري*">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">فوتر الرسالة</div>
+            <input class="ctrl-input" id="wa-footer-text" value="✅ شكراً للطيار ديليفري ✈️">
+          </div>
+          <div class="ctrl-row">
+            <div class="ctrl-label">فاصل الأسطر (separator)</div>
+            <input class="ctrl-input" id="wa-separator" value="━━━━━━━━━━━━━━">
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-group">
+        <div class="ctrl-group-header">👁️ معاينة الرسالة</div>
+        <div class="ctrl-group-body">
+          <div style="background:var(--bg);border-radius:10px;padding:14px;font-size:12px;color:var(--text-mid);white-space:pre-line;line-height:1.8;border:1px solid var(--border2)" id="wa-preview">اضغط معاينة</div>
+          <button onclick="previewWA()" style="margin-top:10px;background:var(--orange-glow);border:1.5px solid rgba(255,69,0,.3);border-radius:10px;padding:9px;color:var(--orange);font-size:13px;font-weight:700;cursor:pointer;width:100%">🔄 تحديث المعاينة</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end editor-area -->
+</div><!-- end layout -->
+
+    <!-- USERS PANEL - outside layout for full width feel but inside editor -->
+<style>
+.user-card{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;margin-bottom:10px}
+.user-avatar{width:40px;height:40px;border-radius:50%;background:var(--orange-glow);border:2px solid var(--orange);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.user-info{flex:1}
+.user-name{font-size:14px;font-weight:800;color:var(--text)}
+.user-role-badge{font-size:11px;font-weight:700;padding:2px 10px;border-radius:50px;display:inline-block;margin-top:3px}
+.role-super{background:rgba(255,69,0,.2);color:var(--orange)}
+.role-admin{background:rgba(59,130,246,.2);color:#60a5fa}
+.role-driver{background:rgba(34,197,94,.2);color:var(--green)}
+.user-actions{display:flex;gap:6px}
+.ubtn{border:none;border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;transition:all .15s}
+.ubtn-edit{background:rgba(59,130,246,.15);color:#60a5fa}
+.ubtn-edit:hover{background:#3b82f6;color:#fff}
+.ubtn-del{background:rgba(239,68,68,.15);color:var(--red)}
+.ubtn-del:hover{background:var(--red);color:#fff}
+.add-user-form{background:var(--card);border:1.5px dashed var(--border2);border-radius:12px;padding:16px;margin-top:14px;display:none}
+.add-user-form.show{display:block}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.add-user-btn-main{background:var(--orange);color:#fff;border:none;border-radius:10px;padding:10px 20px;font-size:14px;font-weight:800;cursor:pointer;width:100%;margin-top:4px}
+.add-user-btn-main:hover{background:var(--orange-dark)}
+.toggle-form-btn{background:var(--orange-glow);border:1.5px dashed rgba(255,69,0,.3);border-radius:10px;padding:10px;color:var(--orange);font-size:13px;font-weight:700;cursor:pointer;text-align:center;width:100%;margin-top:4px}
+.toggle-form-btn:hover{background:rgba(255,69,0,.2)}
+</style>
+
+<div class="preview-bar">
+  <button class="preview-link pl-index" onclick="applyAndPreview()">👁️ تطبيق ومعاينة</button>
+  <button class="preview-link pl-orders" onclick="window.open('orders.html')">📋 صفحة الأوردرات</button>
+</div>
+
+<div class="toast" id="toast">✅ تم الحفظ بنجاح!</div>
+
+<script>
+// NAV
+function showPanel(id, btn) {
+  document.querySelectorAll('.section-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// COLOR SYNC
+function syncColor(colorId, hexId) {
+  document.getElementById(hexId).value = document.getElementById(colorId).value;
+}
+function syncHex(hexId, colorId) {
+  const v = document.getElementById(hexId).value;
+  if (/^#[0-9A-Fa-f]{6}$/.test(v)) document.getElementById(colorId).value = v;
+}
+
+// CHIP EDITOR
+function delChip(btn) { btn.closest('.chip-item').remove(); }
+function addChip(editorId) {
+  const editor = document.getElementById(editorId);
+  const addBtn = editor.nextElementSibling;
+  const item = document.createElement('div');
+  item.className = 'chip-item';
+  item.innerHTML = '<input placeholder="نص جديد..."><button class="chip-del" onclick="delChip(this)">✕</button>';
+  editor.appendChild(item);
+  item.querySelector('input').focus();
+}
+
+// DRAG & DROP (sections)
+let dragEl = null;
+document.querySelectorAll('.section-item').forEach(item => {
+  item.addEventListener('dragstart', e => { dragEl = item; setTimeout(() => item.style.opacity='.4', 0); });
+  item.addEventListener('dragend',   () => { dragEl.style.opacity='1'; dragEl=null; });
+  item.addEventListener('dragover',  e => { e.preventDefault(); const list=document.getElementById('sections-sortable'); const after=getDragAfter(list,e.clientY); if(!after) list.appendChild(dragEl); else list.insertBefore(dragEl,after); });
+});
+function getDragAfter(list, y) {
+  return [...list.querySelectorAll('.section-item:not([style*="opacity"])')].reduce((closest,child) => {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height/2;
+    return offset < 0 && offset > closest.offset ? {offset,element:child} : closest;
+  },{offset:Number.NEGATIVE_INFINITY}).element;
+}
+
+// COLLECT ALL SETTINGS
+function collectSettings() {
+  const get = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const getCheck = id => { const el = document.getElementById(id); return el ? el.checked : true; };
+  const getChips = editorId => [...document.querySelectorAll(`#${editorId} .chip-item input`)].map(i => i.value.trim()).filter(Boolean);
+
+  return {
+    // General
+    pageTitle: get('g-page-title'),
+    maxWidth: get('g-max-width') + 'px',
+    footer: get('g-footer'),
+    footerShow: getCheck('g-footer-show'),
+    // Colors
+    orange: get('c-orange-hex'),
+    orangeDark: get('c-orange-dark-hex'),
+    orangeLight: get('c-orange-light-hex'),
+    bg: get('c-bg-hex'),
+    // Fonts
+    logoFontSize: document.getElementById('f-logo-size')?.value + 'px',
+    heroFontSize: document.getElementById('f-hero-size')?.value + 'px',
+    cardTitleSize: document.getElementById('f-card-title-size')?.value + 'px',
+    labelSize: document.getElementById('f-label-size')?.value + 'px',
+    submitSize: document.getElementById('f-submit-size')?.value + 'px',
+    // Header
+    logoMain: get('h-logo-main'),
+    logoSub: get('h-logo-sub'),
+    headerIcon: get('h-icon'),
+    // Hero
+    heroTitle: get('hero-title'),
+    heroSub: get('hero-sub'),
+    heroShowSteps: getCheck('hero-show-steps'),
+    heroGradientDir: get('hero-gradient-dir'),
+    // Steps
+    steps: getChips('steps-editor'),
+    // Card client
+    ccIcon: get('cc-icon'), ccTitle: get('cc-title'), ccSub: get('cc-sub'),
+    ccShow: getCheck('cc-show'),
+    ccNameLabel: get('cc-name-label'), ccNamePh: get('cc-name-ph'),
+    ccPhoneLabel: get('cc-phone-label'), ccPhonePh: get('cc-phone-ph'),
+    ccPhoneShow: getCheck('cc-phone-show'),
+    // Card address
+    caIcon: get('ca-icon'), caTitle: get('ca-title'), caSub: get('ca-sub'),
+    caFromLabel: get('ca-from-label'), caFromPh: get('ca-from-ph'), caFromHint: get('ca-from-hint'),
+    caFromVoice: getCheck('ca-from-voice'),
+    caToLabel: get('ca-to-label'), caToPh: get('ca-to-ph'), caToHint: get('ca-to-hint'),
+    caToVoice: getCheck('ca-to-voice'),
+    caDividerIcon: get('ca-divider-icon'),
+    // Card order
+    coIcon: get('co-icon'), coTitle: get('co-title'), coSub: get('co-sub'),
+    coDetailsPh: get('co-details-ph'),
+    coAmountShow: getCheck('co-amount-show'),
+    coTimeShow: getCheck('co-time-show'),
+    coNotesShow: getCheck('co-notes-show'),
+    // Chips
+    orderTypes: getChips('chips-editor'),
+    // Submit
+    sbText: get('sb-text'), sbIcon: get('sb-icon'),
+    sbSuccessIcon: get('sb-success-icon'), sbSuccessTitle: get('sb-success-title'),
+    sbCloseText: get('sb-close-text'),
+    // Footer
+    ftText: get('ft-text'), ftShow: getCheck('ft-show'),
+    // WhatsApp message settings
+    waSettings: {
+      header:      getCheck('wa-header'),
+      name:        getCheck('wa-name'),
+      phone:       getCheck('wa-phone'),
+      from:        getCheck('wa-from'),
+      to:          getCheck('wa-to'),
+      details:     getCheck('wa-details'),
+      type:        getCheck('wa-type'),
+      amount:      getCheck('wa-amount'),
+      time:        getCheck('wa-time'),
+      notes:       getCheck('wa-notes'),
+      footer:      getCheck('wa-footer'),
+      headerText:  get('wa-header-text'),
+      footerText:  get('wa-footer-text'),
+      separator:   get('wa-separator'),
+    },
+    // Fields control
+    fieldsControl: {
+      name:    { show: getCheck('fc-name-show'),    req: getCheck('fc-name-req'),    ph: get('fc-name-ph') },
+      phone:   { show: getCheck('fc-phone-show'),   req: getCheck('fc-phone-req'),   ph: get('fc-phone-ph') },
+      from:    { show: getCheck('fc-from-show'),    req: getCheck('fc-from-req'),    ph: get('fc-from-ph') },
+      to:      { show: getCheck('fc-to-show'),      req: getCheck('fc-to-req'),      ph: get('fc-to-ph') },
+      details: { show: getCheck('fc-details-show'), req: getCheck('fc-details-req'), ph: get('fc-details-ph') },
+      amount:  { show: getCheck('fc-amount-show'),  req: getCheck('fc-amount-req'),  ph: get('fc-amount-ph') },
+      time:    { show: getCheck('fc-time-show'),    req: getCheck('fc-time-req') },
+      type:    { show: getCheck('fc-type-show'),    req: getCheck('fc-type-req') },
+      notes:   { show: getCheck('fc-notes-show'),   req: getCheck('fc-notes-req'),   ph: get('fc-notes-ph') },
+    },
+    sectionOrder: [...document.querySelectorAll('#sections-sortable .section-item')].map(el => ({
+      key: el.dataset.section,
+      visible: el.querySelector('input[type=checkbox]').checked
+    }))
+  };
+}
+
+// SAVE
+function saveAll() {
+  const s = collectSettings();
+  localStorage.setItem('altayar_settings', JSON.stringify(s));
+  const toast = document.getElementById('toast');
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2500);
+}
+
+function applyAndPreview() {
+  saveAll();
+  window.open('index.html');
+}
+
+// LOAD SAVED
+window.addEventListener('load', () => {
+  const saved = localStorage.getItem('altayar_settings');
+  if (!saved) return;
+  try {
+    const s = JSON.parse(saved);
+    const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
+    const setChk = (id, val) => { const el=document.getElementById(id); if(el) el.checked=val; };
+    set('g-page-title', s.pageTitle); set('g-footer', s.footer);
+    setChk('g-footer-show', s.footerShow);
+    set('c-orange-hex', s.orange); set('c-orange', s.orange);
+    set('c-orange-dark-hex', s.orangeDark); set('c-orange-dark', s.orangeDark);
+    set('c-orange-light-hex', s.orangeLight); set('c-orange-light', s.orangeLight);
+    set('c-bg-hex', s.bg); set('c-bg', s.bg);
+    set('h-logo-main', s.logoMain); set('h-logo-sub', s.logoSub); set('h-icon', s.headerIcon);
+    set('hero-title', s.heroTitle); set('hero-sub', s.heroSub);
+    set('hero-gradient-dir', s.heroGradientDir);
+    setChk('hero-show-steps', s.heroShowSteps);
+    set('cc-icon', s.ccIcon); set('cc-title', s.ccTitle); set('cc-sub', s.ccSub);
+    setChk('cc-show', s.ccShow);
+    set('cc-name-label', s.ccNameLabel); set('cc-name-ph', s.ccNamePh);
+    set('cc-phone-label', s.ccPhoneLabel); set('cc-phone-ph', s.ccPhonePh);
+    setChk('cc-phone-show', s.ccPhoneShow);
+    set('ca-icon', s.caIcon); set('ca-title', s.caTitle); set('ca-sub', s.caSub);
+    set('ca-from-label', s.caFromLabel); set('ca-from-ph', s.caFromPh); set('ca-from-hint', s.caFromHint);
+    setChk('ca-from-voice', s.caFromVoice);
+    set('ca-to-label', s.caToLabel); set('ca-to-ph', s.caToPh); set('ca-to-hint', s.caToHint);
+    setChk('ca-to-voice', s.caToVoice);
+    set('ca-divider-icon', s.caDividerIcon);
+    set('co-icon', s.coIcon); set('co-title', s.coTitle); set('co-sub', s.coSub);
+    set('co-details-ph', s.coDetailsPh);
+    setChk('co-amount-show', s.coAmountShow); setChk('co-time-show', s.coTimeShow); setChk('co-notes-show', s.coNotesShow);
+    set('sb-text', s.sbText); set('sb-icon', s.sbIcon);
+    set('sb-success-icon', s.sbSuccessIcon); set('sb-success-title', s.sbSuccessTitle); set('sb-close-text', s.sbCloseText);
+    set('ft-text', s.ftText); setChk('ft-show', s.ftShow);
+  } catch(e) { console.error(e); }
+});
+
+// User badge + logout
+window.doLogout = function() {
+  if (confirm('عايز تخرج؟')) {
+    sessionStorage.removeItem('altayar_user');
+    window.location.href = 'login.html';
+  }
+};
+
+(function(){
+  const u = window.__altayar_user;
+  if (!u) return;
+  const badge = document.getElementById('user-badge');
+  if (badge) {
+    const icons = { super: '👑', admin: '🧑‍💼', driver: '🛵' };
+    badge.textContent = (icons[u.role] || '👤') + ' ' + u.name;
+  }
+  // لو مش super admin، إخفي إعدادات التحكم الحساسة
+  if (u.role !== 'super') {
+    document.querySelectorAll('.hbtn-save').forEach(b => b.style.display='none');
+    document.querySelector('.preview-bar') && (document.querySelector('.preview-bar').style.display='none');
+  }
+})();
+
+// =========================================
+// 👥 USERS MANAGEMENT
+// =========================================
+const DEFAULT_USERS = [
+  { username:'superadmin', password:'super@2025', role:'super',  name:'سوبر أدمن', redirect:'admin.html',  canAccess:['admin.html','orders.html','index.html'] },
+  { username:'admin',      password:'admin@2025', role:'admin',  name:'الأدمن',     redirect:'orders.html', canAccess:['orders.html','index.html'] },
+  { username:'driver',     password:'driver@2025',role:'driver', name:'المندوب',    redirect:'orders.html', canAccess:['orders.html'] }
+];
+
+function loadUsers() {
+  const saved = localStorage.getItem('altayar_users');
+  return saved ? JSON.parse(saved) : DEFAULT_USERS;
+}
+function saveUsers(users) {
+  localStorage.setItem('altayar_users', JSON.stringify(users));
+  renderUsers();
+}
+function renderUsers() {
+  const users = loadUsers();
+  const icons = {super:'👑',admin:'🧑‍💼',driver:'🛵'};
+  const names = {super:'سوبر أدمن',admin:'أدمن',driver:'مندوب'};
+  const list = document.getElementById('users-list');
+  if (!list) return;
+  list.innerHTML = users.map((u,i) => `
+    <div class="user-card">
+      <div class="user-avatar">${icons[u.role]||'👤'}</div>
+      <div class="user-info">
+        <div class="user-name">${u.name}</div>
+        <div>
+          <span class="user-role-badge role-${u.role}">${names[u.role]}</span>
+          <span style="font-size:11px;color:var(--text-mid);margin-right:8px">@${u.username}</span>
+          <span style="font-size:11px;color:var(--text-dim)">🔑 ${u.password}</span>
+        </div>
+      </div>
+      <div class="user-actions">
+        <button class="ubtn ubtn-edit" onclick="editUser(${i})">✏️ تعديل</button>
+        ${users.length>1?`<button class="ubtn ubtn-del" onclick="deleteUser(${i})">🗑️ حذف</button>`:''}
+      </div>
+    </div>`).join('');
+  generateCode(users);
+}
+function generateCode(users) {
+  const out = document.getElementById('users-code-output');
+  if (!out) return;
+  out.value = 'const USERS = ' + JSON.stringify(users, null, 2) + ';';
+}
+function toggleAddForm() {
+  document.getElementById('add-user-form').classList.toggle('show');
+}
+function addUser() {
+  const username = document.getElementById('new-username').value.trim();
+  const password = document.getElementById('new-password').value.trim();
+  const name     = document.getElementById('new-name').value.trim();
+  const role     = document.getElementById('new-role').value;
+  if (!username||!password||!name){alert('⚠️ اكمل كل الحقول');return;}
+  const users = loadUsers();
+  if (users.find(u=>u.username===username)){alert('❌ اليوزرنيم موجود');return;}
+  const accessMap = {super:['admin.html','orders.html','index.html'],admin:['orders.html','index.html'],driver:['orders.html']};
+  const redirMap  = {super:'admin.html',admin:'orders.html',driver:'orders.html'};
+  users.push({username,password,role,name,redirect:redirMap[role],canAccess:accessMap[role]});
+  saveUsers(users);
+  document.getElementById('new-username').value='';
+  document.getElementById('new-password').value='';
+  document.getElementById('new-name').value='';
+  document.getElementById('add-user-form').classList.remove('show');
+  showToast('✅ تم إضافة المستخدم!');
+}
+function editUser(i) {
+  const users = loadUsers();
+  const u = users[i];
+  const newPass = prompt(`باسورد جديد لـ "${u.name}" (فاضي = نفس الباسورد):`, '');
+  if (newPass===null) return;
+  const newName = prompt('الاسم الجديد:', u.name);
+  if (newName===null) return;
+  if (newPass) users[i].password = newPass;
+  if (newName) users[i].name = newName;
+  saveUsers(users);
+  showToast('✅ تم التعديل!');
+}
+function deleteUser(i) {
+  const users = loadUsers();
+  if (!confirm(`مسح "${users[i].name}"؟`)) return;
+  users.splice(i,1);
+  saveUsers(users);
+  showToast('🗑️ تم الحذف');
+}
+function copyUsersCode() {
+  const out = document.getElementById('users-code-output');
+  out.select(); document.execCommand('copy');
+  showToast('📋 تم النسخ! حطه في login.html بدل const USERS');
+}
+function previewWA() {
+  const g = id => { const el=document.getElementById(id); return el?el.checked:true; };
+  const t = id => { const el=document.getElementById(id); return el?el.value:''; };
+  const sep = t('wa-separator') || '━━━━━━━━━━━━━━';
+  const lines = [];
+  if (g('wa-header'))  { lines.push(t('wa-header-text')); lines.push(sep); }
+  if (g('wa-name'))    lines.push('👤 *العميل:* محمد أحمد');
+  if (g('wa-phone'))   lines.push('📞 *التليفون:* 01012345678');
+  if (g('wa-from')||g('wa-to')) lines.push(sep);
+  if (g('wa-from'))    lines.push('📦 *الاستلام من:*\nمحل النور، شارع الجمهورية');
+  if (g('wa-to'))      lines.push('🏠 *التوصيل لـ:*\nشارع النيل، برج الياسمين');
+  lines.push(sep);
+  if (g('wa-details')) lines.push('📋 *الطلب:*\nعلبة شيبسي + عصير مانجو');
+  if (g('wa-type'))    lines.push('🏷️ *النوع:* 🍕 أكل وشرب');
+  if (g('wa-amount'))  lines.push('💰 *المبلغ:* 85 جنيه');
+  if (g('wa-time'))    lines.push('🕐 *الوقت:* دلوقتي فوراً 🔥');
+  if (g('wa-notes'))   lines.push('📝 *ملاحظات:* اتصل قبل الوصول');
+  if (g('wa-footer'))  { lines.push(sep); lines.push(t('wa-footer-text')); }
+  document.getElementById('wa-preview').textContent = lines.join('\n');
+}
+
+window.addEventListener('load', () => {
+  renderUsers();
+  // تحميل إعدادات WA
+  const saved = localStorage.getItem('altayar_settings');
+  if (saved) {
+    try {
+      const s = JSON.parse(saved);
+      if (s.waSettings) {
+        const wa = s.waSettings;
+        const sc = (id,v) => { const el=document.getElementById(id); if(el) el.checked=v; };
+        const sv = (id,v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
+        sc('wa-header',wa.header); sc('wa-name',wa.name); sc('wa-phone',wa.phone);
+        sc('wa-from',wa.from);     sc('wa-to',wa.to);     sc('wa-details',wa.details);
+        sc('wa-type',wa.type);     sc('wa-amount',wa.amount); sc('wa-time',wa.time);
+        sc('wa-notes',wa.notes);   sc('wa-footer',wa.footer);
+        sv('wa-header-text',wa.headerText); sv('wa-footer-text',wa.footerText);
+        sv('wa-separator',wa.separator);
+      }
+    } catch(e){}
+  }
+});
+</script>
+</body>
+</html>
