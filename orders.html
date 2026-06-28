@@ -260,6 +260,9 @@ window.renderOrders = function() {
 function orderCard(o) {
   const time = o.createdAt ? new Date(o.createdAt.seconds*1000).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '';
   const isNew = o.status === 'جديد';
+  const role = window.__altayar_user?.role || 'driver';
+  const canChange = role === 'super' || role === 'admin'; // المندوب يشوف بس
+
   return `
   <div class="order-card ${isNew?'new':''}">
     <div class="order-top">
@@ -281,17 +284,17 @@ function orderCard(o) {
       </div>
       <div class="details-text">${o.details || '-'}</div>
       <div class="order-meta">
-        ${o.type ? `<span class="meta-chip">${o.type}</span>` : ''}
+        ${o.type   ? `<span class="meta-chip">${o.type}</span>` : ''}
         ${o.amount ? `<span class="meta-chip">💰 ${o.amount} ج</span>` : ''}
-        ${o.time ? `<span class="meta-chip">🕐 ${o.time}</span>` : ''}
-        ${o.notes ? `<span class="meta-chip">📝 ${o.notes}</span>` : ''}
+        ${o.time   ? `<span class="meta-chip">🕐 ${o.time}</span>` : ''}
+        ${o.notes  ? `<span class="meta-chip">📝 ${o.notes}</span>` : ''}
       </div>
       <div class="order-actions">
         <button class="action-btn btn-call" onclick="callClient('${o.phone}')">📞 اتصال</button>
         <button class="action-btn btn-whatsapp" onclick="sendWhatsApp(${JSON.stringify(o).replace(/"/g,'&quot;')})">💬 واتساب</button>
-        ${o.status==='جديد'  ? `<button class="action-btn btn-progress" onclick="updateStatus('${o.id}','جاري')">⚡ جاري</button>` : ''}
-        ${o.status!=='تم' && o.status!=='ملغي' ? `<button class="action-btn btn-done" onclick="updateStatus('${o.id}','تم')">✅ تم</button>` : ''}
-        ${o.status!=='ملغي' && o.status!=='تم' ? `<button class="action-btn btn-cancel" onclick="updateStatus('${o.id}','ملغي')">❌ إلغاء</button>` : ''}
+        ${canChange && o.status==='جديد'                          ? `<button class="action-btn btn-progress" onclick="updateStatus('${o.id}','جاري')">⚡ جاري</button>` : ''}
+        ${canChange && o.status!=='تم' && o.status!=='ملغي'       ? `<button class="action-btn btn-done"     onclick="updateStatus('${o.id}','تم')">✅ تم</button>` : ''}
+        ${canChange && o.status!=='ملغي' && o.status!=='تم'       ? `<button class="action-btn btn-cancel"   onclick="updateStatus('${o.id}','ملغي')">❌ إلغاء</button>` : ''}
       </div>
     </div>
   </div>`;
