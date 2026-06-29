@@ -1008,9 +1008,13 @@ function collectSettings() {
 function saveAll() {
   const s = collectSettings();
   localStorage.setItem('altayar_settings', JSON.stringify(s));
-  const toast = document.getElementById('toast');
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2500);
+  // أبلغ كل التابات الثانية بالتحديث فوراً
+  try {
+    const bc = new BroadcastChannel('altayar_settings_channel');
+    bc.postMessage('updated');
+    bc.close();
+  } catch(e) {}
+  showToast('✅ تم الحفظ بنجاح!');
 }
 
 function applyAndPreview() {
