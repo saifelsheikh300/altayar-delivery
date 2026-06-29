@@ -141,11 +141,10 @@ select.ctrl-input{cursor:pointer}
 <body>
 <script>
 (function(){
-  // لو بيتفتح locally (file://) اعمل session تجريبي تلقائي
   if (window.location.protocol === 'file:') {
     if (!sessionStorage.getItem('altayar_user')) {
       sessionStorage.setItem('altayar_user', JSON.stringify({
-        username:'superadmin', name:'سوبر أدمن', role:'super',
+        uid:'local-test', name:'تجربة محلية', role:'super',
         canAccess:['admin.html','orders.html','index.html']
       }));
     }
@@ -154,8 +153,7 @@ select.ctrl-input{cursor:pointer}
   if (!u) { window.location.href='login.html'; return; }
   var user = JSON.parse(u);
   if (!user.canAccess || user.canAccess.indexOf('admin.html') === -1) {
-    alert('⛔ مش معاك صلاحية لهذه الصفحة');
-    window.location.href='login.html'; return;
+    alert('⛔ مش معاك صلاحية'); window.location.href='login.html'; return;
   }
   window.__altayar_user = user;
 })();
@@ -1084,9 +1082,7 @@ window.doLogout = function() {
 // =========================================
 // 👥 USERS MANAGEMENT
 // =========================================
-const DEFAULT_USERS = [
-  { username:'test', password:'test123', role:'super', name:'تجربة', redirect:'admin.html', canAccess:['admin.html','orders.html','index.html'] }
-];
+const DEFAULT_USERS = [];
 
 function loadUsers() {
   const saved = localStorage.getItem('altayar_users');

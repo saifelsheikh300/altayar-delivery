@@ -115,11 +115,10 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 <body>
 <script>
 (function(){
-  // لو بيتفتح locally (file://) اعمل session تجريبي تلقائي
   if (window.location.protocol === 'file:') {
     if (!sessionStorage.getItem('altayar_user')) {
       sessionStorage.setItem('altayar_user', JSON.stringify({
-        username:'superadmin', name:'سوبر أدمن', role:'super',
+        uid:'local-test', name:'تجربة محلية', role:'super',
         canAccess:['admin.html','orders.html','index.html']
       }));
     }
@@ -128,8 +127,7 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
   if (!u) { window.location.href='login.html'; return; }
   var user = JSON.parse(u);
   if (!user.canAccess || user.canAccess.indexOf('orders.html') === -1) {
-    alert('⛔ مش معاك صلاحية لهذه الصفحة');
-    window.location.href='login.html'; return;
+    alert('⛔ مش معاك صلاحية'); window.location.href='login.html'; return;
   }
   window.__altayar_user = user;
 })();
@@ -282,7 +280,11 @@ function orderCard(o) {
         <div class="addr-item"><span class="addr-icon">📦</span><span class="addr-text">${o.from || '-'}</span></div>
         <div class="addr-item"><span class="addr-icon">🏠</span><span class="addr-text">${o.to || '-'}</span></div>
       </div>
-      <div class="details-text">${o.details || '-'}</div>
+      <div class="details-text">${o.details || (o.voiceDetails ? '' : '-')}
+        ${o.voiceDetails ? `<div style="margin-top:6px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:4px">🎙️ رسالة صوتية:</div><audio controls src="${o.voiceDetails}" style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
+        ${o.voiceFrom    ? `<div style="margin-top:4px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:2px">🎙️ صوت عنوان الاستلام:</div><audio controls src="${o.voiceFrom}"    style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
+        ${o.voiceTo      ? `<div style="margin-top:4px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:2px">🎙️ صوت عنوان التوصيل:</div><audio controls src="${o.voiceTo}"      style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
+      </div>
       <div class="order-meta">
         ${o.type   ? `<span class="meta-chip">${o.type}</span>` : ''}
         ${o.amount ? `<span class="meta-chip">💰 ${o.amount} ج</span>` : ''}
@@ -389,10 +391,22 @@ function sendPushNotif(order) {
   n.onclick = () => { window.focus(); n.close(); };
 }
 
-// تفعيل الإشعارات لو كانت موافق عليها قبل كده
-if ('Notification' in window && Notification.permission === 'granted') {
-  notifPermission = true;
-}
+// تفعيل الإشعارات تلقائي عند فتح الصفحة
+(async function autoNotif() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    const perm = await Notification.requestPermission();
+    notifPermission = perm === 'granted';
+  } else {
+    notifPermission = Notification.permission === 'granted';
+  }
+  const btn = document.getElementById('notif-toggle-btn');
+  if (btn) {
+    btn.textContent    = notifPermission ? '🔔 الإشعارات شغالة' : '🔕 فعّل الإشعارات';
+    btn.style.background = notifPermission ? 'rgba(34,197,94,.2)' : 'rgba(255,255,255,.1)';
+    btn.style.color      = notifPermission ? '#22c55e' : '#fff';
+  }
+})();
 
 // ── User badge + logout ──
 window.doLogout = function() {

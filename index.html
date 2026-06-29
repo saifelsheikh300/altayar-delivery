@@ -270,29 +270,73 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 let activeRecognition = null;
+let mediaRecorder = null;
+let audioChunks = [];
+let audioBlobs = {}; // fieldId -> blob
 
-window.startVoice = function(fieldId, statusId, btn) {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { document.getElementById(statusId).textContent = '⚠️ مش متاح في المتصفح ده'; return; }
+// ── تسجيل صوت حقيقي ──
+window.startVoice = async function(fieldId, statusId, btn) {
   const statusEl = document.getElementById(statusId);
-  if (activeRecognition) {
-    activeRecognition.stop(); activeRecognition = null;
-    btn.classList.remove('recording'); btn.textContent = '🎤'; statusEl.textContent = ''; return;
+
+  // لو في تسجيل شغال، وقفه
+  if (mediaRecorder && mediaRecorder.state === 'recording') {
+    mediaRecorder.stop();
+    btn.classList.remove('recording');
+    btn.textContent = '🎤';
+    statusEl.textContent = '✅ تم التسجيل!';
+    return;
   }
-  const r = new SR();
-  r.lang = 'ar-EG'; r.interimResults = true; r.maxAlternatives = 1;
-  activeRecognition = r;
-  btn.classList.add('recording'); btn.textContent = '⏹️';
-  statusEl.textContent = '🔴 بسمعك... اتكلم دلوقتي';
-  r.onresult = e => {
-    const t = Array.from(e.results).map(x => x[0].transcript).join('');
-    document.getElementById(fieldId).value = t;
-    if (e.results[e.results.length-1].isFinal) statusEl.textContent = '✅ اتسجل!';
-  };
-  r.onerror = () => { statusEl.textContent='⚠️ حاول تاني'; btn.classList.remove('recording'); btn.textContent='🎤'; activeRecognition=null; };
-  r.onend = () => { btn.classList.remove('recording'); btn.textContent='🎤'; activeRecognition=null; if(statusEl.textContent.includes('بسمعك')) statusEl.textContent=''; };
-  r.start();
+
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    audioChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = e => { if(e.data.size > 0) audioChunks.push(e.data); };
+
+    mediaRecorder.onstop = () => {
+      const blob = new Blob(audioChunks, { type: 'audio/webm' });
+      audioBlobs[fieldId] = blob;
+      stream.getTracks().forEach(t => t.stop());
+
+      // عرض مشغل صوت صغير
+      const field = document.getElementById(fieldId);
+      const wrap  = field.parentElement;
+      const oldPlayer = wrap.querySelector('.audio-player');
+      if (oldPlayer) oldPlayer.remove();
+
+      const url = URL.createObjectURL(blob);
+      const player = document.createElement('div');
+      player.className = 'audio-player';
+      player.style.cssText = 'margin-top:6px;display:flex;align-items:center;gap:8px;background:var(--orange-glow);border-radius:8px;padding:8px 10px;border:1px solid var(--border)';
+      player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
+      wrap.appendChild(player);
+
+      // حط placeholder يدل إن في صوت مسجل
+      if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
+        field.placeholder = '🎙️ تم تسجيل رسالة صوتية';
+        field.value = '';
+      }
+    };
+
+    mediaRecorder.start();
+    btn.classList.add('recording');
+    btn.textContent = '⏹️';
+    statusEl.textContent = '🔴 جاري التسجيل... اضغط مرة تانية للإيقاف';
+
+  } catch(e) {
+    statusEl.textContent = '⚠️ مش قادر يوصل للميكروفون';
+    console.error(e);
+  }
 };
+
+// ── إشعارات تلقائية عند فتح الصفحة ──
+(async function autoNotif() {
+  if (!('Notification' in window)) return;
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+})();
 
 window.selectChip = function(el) {
   document.querySelectorAll('#type-chips .chip').forEach(c => c.classList.remove('active'));
@@ -332,11 +376,23 @@ window.submitOrder = async function() {
   }
 
   const btn = document.getElementById('submit-btn');
-  btn.classList.add('loading'); btn.querySelector('span').textContent = 'جاري الإرسال...';
+  btn.classList.add('loading'); btn.querySelectorAll('span')[0].textContent = 'جاري الإرسال...';
 
   try {
+    // تحويل الصوتيات لـ base64
+    const toBase64 = blob => new Promise(res => {
+      const r = new FileReader();
+      r.onload = () => res(r.result);
+      r.readAsDataURL(blob);
+    });
+
+    const voiceFrom    = audioBlobs['from-address']    ? await toBase64(audioBlobs['from-address'])    : null;
+    const voiceTo      = audioBlobs['to-address']      ? await toBase64(audioBlobs['to-address'])      : null;
+    const voiceDetails = audioBlobs['order-details']   ? await toBase64(audioBlobs['order-details'])   : null;
+
     await addDoc(collection(db, 'orders'), {
       name, phone, from, to, details, amount, time, notes, type,
+      voiceFrom, voiceTo, voiceDetails,
       status: 'جديد',
       createdAt: serverTimestamp()
     });
@@ -347,7 +403,7 @@ window.submitOrder = async function() {
     alert('❌ حصل خطأ، حاول تاني');
     console.error(e);
   }
-  btn.classList.remove('loading'); btn.querySelector('span').textContent = 'إرسال الطلب';
+  btn.classList.remove('loading'); btn.querySelectorAll('span')[0].textContent = 'إرسال الطلب';
 };
 
 window.closeSuccess = function() {
@@ -357,107 +413,81 @@ window.closeSuccess = function() {
   document.querySelectorAll('#type-chips .chip').forEach((c,i) => c.classList.toggle('active',i===0));
 };
 </script>
-</body>
-</html>
 
 <script>
-// Apply admin settings from localStorage
-(function(){
+// ── Apply admin settings ──
+function applySettings() {
   const saved = localStorage.getItem('altayar_settings');
   if (!saved) return;
   try {
     const s = JSON.parse(saved);
-    const set = (sel, prop, val) => { document.querySelectorAll(sel).forEach(el => { if(val!==undefined && val!==null) el[prop]=val; }); };
     const show = (sel, visible) => { document.querySelectorAll(sel).forEach(el => el.style.display = visible ? '' : 'none'); };
 
     if (s.pageTitle) document.title = s.pageTitle;
 
-    // Colors via CSS vars
     const r = document.documentElement.style;
     if (s.orange)      r.setProperty('--orange', s.orange);
     if (s.orangeDark)  r.setProperty('--orange-dark', s.orangeDark);
     if (s.orangeLight) r.setProperty('--orange-light', s.orangeLight);
     if (s.bg)          r.setProperty('--off-white', s.bg);
 
-    // Font sizes
-    if (s.logoFontSize)    document.querySelector('.logo-main') && (document.querySelector('.logo-main').style.fontSize = s.logoFontSize);
-    if (s.heroFontSize)    document.querySelector('.hero h1') && (document.querySelector('.hero h1').style.fontSize = s.heroFontSize);
-    if (s.cardTitleSize)   document.querySelectorAll('.card-title').forEach(el => el.style.fontSize = s.cardTitleSize);
-    if (s.labelSize)       document.querySelectorAll('label').forEach(el => el.style.fontSize = s.labelSize);
-    if (s.submitSize)      document.querySelector('.submit-btn') && (document.querySelector('.submit-btn').style.fontSize = s.submitSize);
+    if (s.logoFontSize)  document.querySelector('.logo-main') && (document.querySelector('.logo-main').style.fontSize = s.logoFontSize);
+    if (s.heroFontSize)  document.querySelector('.hero h1')   && (document.querySelector('.hero h1').style.fontSize = s.heroFontSize);
+    if (s.cardTitleSize) document.querySelectorAll('.card-title').forEach(el => el.style.fontSize = s.cardTitleSize);
+    if (s.labelSize)     document.querySelectorAll('label').forEach(el => el.style.fontSize = s.labelSize);
+    if (s.submitSize)    document.querySelector('.submit-btn') && (document.querySelector('.submit-btn').style.fontSize = s.submitSize);
 
-    // Header
-    if (s.logoMain)    document.querySelector('.logo-main').textContent = s.logoMain;
-    if (s.logoSub)     document.querySelector('.logo-sub').textContent  = s.logoSub;
-    if (s.headerIcon)  document.querySelector('.logo-icon').textContent  = s.headerIcon;
+    if (s.logoMain)   document.querySelector('.logo-main') && (document.querySelector('.logo-main').textContent = s.logoMain);
+    if (s.logoSub)    document.querySelector('.logo-sub')  && (document.querySelector('.logo-sub').textContent  = s.logoSub);
+    if (s.headerIcon) document.querySelector('.logo-icon') && (document.querySelector('.logo-icon').textContent  = s.headerIcon);
 
-    // Hero
-    if (s.heroTitle)   document.querySelector('.hero h1').textContent = s.heroTitle;
-    if (s.heroSub)     document.querySelector('.hero p').textContent  = s.heroSub;
+    if (s.heroTitle) document.querySelector('.hero h1') && (document.querySelector('.hero h1').textContent = s.heroTitle);
+    if (s.heroSub)   document.querySelector('.hero p')  && (document.querySelector('.hero p').textContent  = s.heroSub);
     if (s.heroShowSteps === false) show('.steps-row', false);
-
-    // Steps
     if (s.steps && s.steps.length) {
       const row = document.querySelector('.steps-row');
-      if (row) { row.innerHTML = s.steps.map(t=>`<div class="step-badge">${t}</div>`).join(''); }
+      if (row) row.innerHTML = s.steps.map(t=>`<div class="step-badge">${t}</div>`).join('');
     }
-
-    // Gradient dir
     if (s.heroGradientDir) {
       const hero = document.querySelector('.hero');
       if (hero) hero.style.background = `linear-gradient(${s.heroGradientDir}, var(--orange-dark), var(--orange) 60%, var(--orange-light))`;
     }
 
-    // Card client
-    if (s.ccIcon)       document.querySelectorAll('.card-icon')[0] && (document.querySelectorAll('.card-icon')[0].textContent = s.ccIcon);
-    if (s.ccTitle)      document.querySelectorAll('.card-title')[0] && (document.querySelectorAll('.card-title')[0].textContent = s.ccTitle);
-    if (s.ccSub)        document.querySelectorAll('.card-subtitle')[0] && (document.querySelectorAll('.card-subtitle')[0].textContent = s.ccSub);
+    if (s.ccIcon)  document.querySelectorAll('.card-icon')[0]     && (document.querySelectorAll('.card-icon')[0].textContent     = s.ccIcon);
+    if (s.ccTitle) document.querySelectorAll('.card-title')[0]    && (document.querySelectorAll('.card-title')[0].textContent    = s.ccTitle);
+    if (s.ccSub)   document.querySelectorAll('.card-subtitle')[0] && (document.querySelectorAll('.card-subtitle')[0].textContent = s.ccSub);
     if (s.ccShow === false) document.querySelectorAll('.card')[0] && (document.querySelectorAll('.card')[0].style.display='none');
-    if (s.ccNameLabel)  document.querySelector('#client-name')?.previousElementSibling && (document.querySelector('label[for-client-name]') || document.querySelectorAll('.card')[0]?.querySelectorAll('label')[0])?.textContent && null;
-    if (s.ccNamePh && document.getElementById('client-name'))    document.getElementById('client-name').placeholder = s.ccNamePh;
+    if (s.ccNamePh  && document.getElementById('client-name'))   document.getElementById('client-name').placeholder  = s.ccNamePh;
     if (s.ccPhonePh && document.getElementById('client-phone'))  document.getElementById('client-phone').placeholder = s.ccPhonePh;
     if (s.ccPhoneShow === false) document.getElementById('client-phone')?.closest('.field') && (document.getElementById('client-phone').closest('.field').style.display='none');
 
-    // Card address
-    if (s.caFromPh && document.getElementById('from-address'))   document.getElementById('from-address').placeholder = s.caFromPh;
-    if (s.caToPh && document.getElementById('to-address'))       document.getElementById('to-address').placeholder   = s.caToPh;
+    if (s.caFromPh && document.getElementById('from-address')) document.getElementById('from-address').placeholder = s.caFromPh;
+    if (s.caToPh   && document.getElementById('to-address'))   document.getElementById('to-address').placeholder   = s.caToPh;
     if (s.caDividerIcon) document.querySelector('.divider-icon') && (document.querySelector('.divider-icon').textContent = s.caDividerIcon);
-    if (s.caFromVoice === false) document.querySelector('#from-address + .voice-btn') && (document.querySelector('#from-address').parentElement.querySelector('.voice-btn').style.display='none');
-    if (s.caToVoice   === false) document.querySelector('#to-address').parentElement?.querySelector('.voice-btn') && (document.querySelector('#to-address').parentElement.querySelector('.voice-btn').style.display='none');
+    if (s.caFromVoice === false) document.getElementById('from-address')?.parentElement?.querySelector('.voice-btn') && (document.getElementById('from-address').parentElement.querySelector('.voice-btn').style.display='none');
+    if (s.caToVoice   === false) document.getElementById('to-address')?.parentElement?.querySelector('.voice-btn')   && (document.getElementById('to-address').parentElement.querySelector('.voice-btn').style.display='none');
 
-    // Card order
     if (s.coDetailsPh && document.getElementById('order-details')) document.getElementById('order-details').placeholder = s.coDetailsPh;
-    if (s.coAmountShow === false) document.getElementById('amount')?.closest('.field') && (document.getElementById('amount').closest('.field').style.display='none');
-    if (s.coTimeShow   === false) document.getElementById('delivery-time')?.closest('.field') && (document.getElementById('delivery-time').closest('.field').style.display='none');
-    if (s.coNotesShow  === false) document.getElementById('notes')?.closest('.field') && (document.getElementById('notes').closest('.field').style.display='none');
+    if (s.coAmountShow === false) document.getElementById('amount')?.closest('.field')          && (document.getElementById('amount').closest('.field').style.display='none');
+    if (s.coTimeShow   === false) document.getElementById('delivery-time')?.closest('.field')   && (document.getElementById('delivery-time').closest('.field').style.display='none');
+    if (s.coNotesShow  === false) document.getElementById('notes')?.closest('.field')           && (document.getElementById('notes').closest('.field').style.display='none');
 
-    // Order types chips
     if (s.orderTypes && s.orderTypes.length) {
       const chipsRow = document.getElementById('type-chips');
-      if (chipsRow) {
-        chipsRow.innerHTML = s.orderTypes.map((t,i) => `<button class="chip${i===0?' active':''}" onclick="selectChip(this)">${t}</button>`).join('');
-      }
+      if (chipsRow) chipsRow.innerHTML = s.orderTypes.map((t,i)=>`<button class="chip${i===0?' active':''}" onclick="selectChip(this)">${t}</button>`).join('');
     }
 
-    // Submit btn
-    if (s.sbText && document.querySelector('.submit-btn span')) document.querySelectorAll('.submit-btn span')[0].textContent = s.sbText;
-    if (s.sbIcon && document.querySelector('.submit-btn span:last-child')) document.querySelectorAll('.submit-btn span')[1].textContent = s.sbIcon;
-
-    // Success
-    if (s.sbSuccessIcon)  document.querySelector('.success-icon') && (document.querySelector('.success-icon').textContent = s.sbSuccessIcon);
+    if (s.sbText && document.querySelectorAll('.submit-btn span')[0]) document.querySelectorAll('.submit-btn span')[0].textContent = s.sbText;
+    if (s.sbIcon && document.querySelectorAll('.submit-btn span')[1]) document.querySelectorAll('.submit-btn span')[1].textContent = s.sbIcon;
+    if (s.sbSuccessIcon)  document.querySelector('.success-icon')  && (document.querySelector('.success-icon').textContent  = s.sbSuccessIcon);
     if (s.sbSuccessTitle) document.querySelector('.success-title') && (document.querySelector('.success-title').textContent = s.sbSuccessTitle);
     if (s.sbCloseText)    document.querySelector('.success-close') && (document.querySelector('.success-close').textContent = s.sbCloseText);
 
-    // Footer
-    if (s.ftText)            document.querySelector('footer') && (document.querySelector('footer').textContent = s.ftText);
-    if (s.ftShow === false)  document.querySelector('footer') && (document.querySelector('footer').style.display='none');
+    if (s.ftText)           document.querySelector('footer') && (document.querySelector('footer').textContent = s.ftText);
+    if (s.ftShow === false) document.querySelector('footer') && (document.querySelector('footer').style.display='none');
 
-    // Max width
-    if (s.maxWidth) {
-      document.querySelectorAll('main, .header-inner').forEach(el => el.style.maxWidth = s.maxWidth);
-    }
+    if (s.maxWidth) document.querySelectorAll('main, .header-inner').forEach(el => el.style.maxWidth = s.maxWidth);
 
-    // Section order & visibility
     if (s.sectionOrder) {
       const main = document.querySelector('main');
       const cards = [...main.querySelectorAll('.card')];
@@ -469,29 +499,23 @@ window.closeSuccess = function() {
         }
       });
     }
-    // زر الإرسال دايماً آخر حاجة
     const submitWrap = document.getElementById('submit-wrap');
     if (submitWrap) document.querySelector('main').appendChild(submitWrap);
 
-    // Fields control
     if (s.fieldsControl) {
       const fc = s.fieldsControl;
-      const applyField = (id, cfg, labelFor) => {
+      const applyField = (id, cfg) => {
         const el = document.getElementById(id);
         if (!el) return;
         const field = el.closest('.field');
         if (!field) return;
         if (cfg.show === false) { field.style.display='none'; return; }
         if (cfg.ph) el.placeholder = cfg.ph;
-        // إجباري أو لا
         const lbl = field.querySelector('label');
         if (lbl) {
           const reqSpan = lbl.querySelector('.req');
-          if (cfg.req && !reqSpan) {
-            lbl.insertAdjacentHTML('beforeend','<span class="req"> *</span>');
-          } else if (!cfg.req && reqSpan) {
-            reqSpan.remove();
-          }
+          if (cfg.req && !reqSpan) lbl.insertAdjacentHTML('beforeend','<span class="req"> *</span>');
+          else if (!cfg.req && reqSpan) reqSpan.remove();
         }
         el.dataset.required = cfg.req ? 'true' : 'false';
       };
@@ -503,13 +527,21 @@ window.closeSuccess = function() {
       applyField('amount',        fc.amount);
       applyField('delivery-time', fc.time);
       applyField('notes',         fc.notes);
-      // نوع الطلب
       if (fc.type && fc.type.show === false) {
-        const typeField = document.getElementById('type-chips');
-        if (typeField) typeField.closest('.field') && (typeField.closest('.field').style.display='none');
+        document.getElementById('type-chips')?.closest('.field') && (document.getElementById('type-chips').closest('.field').style.display='none');
       }
     }
+  } catch(e) { console.error('Settings error:', e); }
+}
 
-  } catch(e) { console.error('Admin settings error:', e); }
-})();
+// تطبيق الإعدادات عند التحميل
+applySettings();
+
+// تحديث تلقائي لو الأدمن غيّر حاجة في تاب تاني
+window.addEventListener('storage', e => {
+  if (e.key === 'altayar_settings') applySettings();
+});
 </script>
+
+</body>
+</html>
