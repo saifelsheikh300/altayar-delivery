@@ -109,6 +109,15 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 .btn-whatsapp{background:rgba(37,211,102,.15);color:#25d366}
 .btn-whatsapp:hover{background:#25d366;color:#fff}
 
+/* 3 نقط */
+.dot-menu-wrap{position:relative;margin-right:auto}
+.dot-menu-btn{background:transparent;border:none;color:var(--text-mid);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;border-radius:6px;transition:background .15s}
+.dot-menu-btn:hover{background:var(--card2);color:var(--text)}
+.dot-menu{display:none;position:absolute;top:110%;right:0;background:#1e1e1e;border:1px solid var(--border);border-radius:10px;min-width:160px;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.5);overflow:hidden}
+.dot-menu.open{display:block}
+.dot-menu button{display:block;width:100%;background:transparent;border:none;color:var(--text);font-size:13px;font-weight:700;padding:11px 16px;text-align:right;cursor:pointer;transition:background .15s}
+.dot-menu button:hover{background:var(--card2)}
+
 @media(max-width:600px){.stats-bar{grid-template-columns:1fr 1fr}.orders-grid{grid-template-columns:1fr}.stat-num{font-size:20px}}
 </style>
 </head>
@@ -275,14 +284,23 @@ function orderCard(o) {
   const time = o.createdAt ? new Date(o.createdAt.seconds*1000).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '';
   const isNew = o.status === 'جديد';
   const role = window.__altayar_user?.role || 'driver';
-  const canChange = role === 'super' || role === 'admin'; // المندوب يشوف بس
+  const canChange = role === 'super' || role === 'admin';
+  const oJson = JSON.stringify(o).replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 
   return `
-  <div class="order-card ${isNew?'new':''}">
+  <div class="order-card ${isNew?'new':''}" id="card-${o.id}">
     <div class="order-top">
       <span class="order-id">#${o.id.slice(-6).toUpperCase()}</span>
       <span class="status-badge s-${o.status}">${o.status}</span>
       <span class="order-time">${time}</span>
+      <div class="dot-menu-wrap">
+        <button class="dot-menu-btn" onclick="toggleMenu('${o.id}')">⋮</button>
+        <div class="dot-menu" id="menu-${o.id}">
+          <button onclick="archiveOrder('${o.id}')">🗂️ أرشفة (إخفاء)</button>
+          ${canChange ? `<button onclick="updateStatus('${o.id}','ملغي');closeMenu('${o.id}')">❌ إلغاء</button>` : ''}
+          ${canChange ? `<button onclick="updateStatus('${o.id}','تم');closeMenu('${o.id}')">✅ تم التوصيل</button>` : ''}
+        </div>
+      </div>
     </div>
     <div class="order-body">
       <div class="client-row">
@@ -296,10 +314,12 @@ function orderCard(o) {
         <div class="addr-item"><span class="addr-icon">📦</span><span class="addr-text">${o.from || '-'}</span></div>
         <div class="addr-item"><span class="addr-icon">🏠</span><span class="addr-text">${o.to || '-'}</span></div>
       </div>
-      <div class="details-text">${o.details || (o.voiceDetails ? '' : '-')}
+      <div class="details-text">
+        ${o.details || ''}
         ${o.voiceDetails ? `<div style="margin-top:6px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:4px">🎙️ رسالة صوتية:</div><audio controls src="${o.voiceDetails}" style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
-        ${o.voiceFrom    ? `<div style="margin-top:4px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:2px">🎙️ صوت عنوان الاستلام:</div><audio controls src="${o.voiceFrom}"    style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
-        ${o.voiceTo      ? `<div style="margin-top:4px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:2px">🎙️ صوت عنوان التوصيل:</div><audio controls src="${o.voiceTo}"      style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
+        ${o.voiceFrom    ? `<div style="margin-top:4px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:2px">🎙️ صوت الاستلام:</div><audio controls src="${o.voiceFrom}" style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
+        ${o.voiceTo      ? `<div style="margin-top:4px"><div style="font-size:11px;color:var(--text-mid);margin-bottom:2px">🎙️ صوت التوصيل:</div><audio controls src="${o.voiceTo}" style="width:100%;height:32px;accent-color:var(--orange)"></audio></div>` : ''}
+        ${!o.details && !o.voiceDetails && !o.voiceFrom && !o.voiceTo ? '-' : ''}
       </div>
       <div class="order-meta">
         ${o.type   ? `<span class="meta-chip">${o.type}</span>` : ''}
@@ -309,13 +329,13 @@ function orderCard(o) {
       </div>
       <div class="order-actions">
         <button class="action-btn btn-call" onclick="callClient('${o.phone}')">📞 اتصال</button>
-        <button class="action-btn btn-whatsapp" onclick="sendWhatsApp(${JSON.stringify(o).replace(/"/g,'&quot;')})">💬 واتساب</button>
-        ${canChange && o.status==='جديد'                          ? `<button class="action-btn btn-progress" onclick="updateStatus('${o.id}','جاري')">⚡ جاري</button>` : ''}
-        ${canChange && o.status!=='تم' && o.status!=='ملغي'       ? `<button class="action-btn btn-done"     onclick="updateStatus('${o.id}','تم')">✅ تم</button>` : ''}
-        ${canChange && o.status!=='ملغي' && o.status!=='تم'       ? `<button class="action-btn btn-cancel"   onclick="updateStatus('${o.id}','ملغي')">❌ إلغاء</button>` : ''}
+        <button class="action-btn btn-whatsapp" onclick="sendWhatsAppPicker('${oJson}')">💬 واتساب</button>
+        ${canChange && o.status==='جديد'                    ? `<button class="action-btn btn-progress" onclick="updateStatus('${o.id}','جاري')">⚡ جاري</button>` : ''}
+        ${canChange && o.status!=='تم' && o.status!=='ملغي' ? `<button class="action-btn btn-done"     onclick="updateStatus('${o.id}','تم')">✅ تم</button>` : ''}
       </div>
     </div>
   </div>`;
+}
 }
 
 window.updateStatus = async function(id, status) {
@@ -323,6 +343,94 @@ window.updateStatus = async function(id, status) {
     await updateDoc(doc(db,'orders',id), { status });
     showNotif(`✅ تم تغيير الحالة لـ "${status}"`);
   } catch(e) { alert('❌ خطأ في التحديث'); }
+};
+
+// ── 3 نقط menu ──
+window.toggleMenu = function(id) {
+  // اغلق كل المنيوهات الثانية
+  document.querySelectorAll('.dot-menu.open').forEach(m => {
+    if (m.id !== 'menu-'+id) m.classList.remove('open');
+  });
+  document.getElementById('menu-'+id)?.classList.toggle('open');
+};
+
+window.closeMenu = function(id) {
+  document.getElementById('menu-'+id)?.classList.remove('open');
+};
+
+// إغلاق المنيو لو ضغط برا
+document.addEventListener('click', e => {
+  if (!e.target.closest('.dot-menu-wrap')) {
+    document.querySelectorAll('.dot-menu.open').forEach(m => m.classList.remove('open'));
+  }
+});
+
+// ── أرشفة (إخفاء محلي) ──
+let archivedIds = JSON.parse(localStorage.getItem('altayar_archived') || '[]');
+
+window.archiveOrder = function(id) {
+  if (!archivedIds.includes(id)) archivedIds.push(id);
+  localStorage.setItem('altayar_archived', JSON.stringify(archivedIds));
+  const card = document.getElementById('card-'+id);
+  if (card) { card.style.transition='all .3s'; card.style.opacity='0'; card.style.transform='scale(.9)'; setTimeout(()=>card.remove(),300); }
+  closeMenu(id);
+  showNotif('🗂️ تم إخفاء الأوردر');
+};
+
+// فلتر الأرشيف من الـ render
+const _origRender = window.renderOrders;
+window.renderOrders = function() {
+  // مش بنعرض المؤرشف
+  const search = document.getElementById('search-input').value.toLowerCase();
+  let filtered = allOrders.filter(o => {
+    if (archivedIds.includes(o.id)) return false;
+    if (currentFilter !== 'all' && o.status !== currentFilter) return false;
+    if (search && !o.name?.toLowerCase().includes(search) && !o.phone?.includes(search)) return false;
+    return true;
+  });
+  const grid  = document.getElementById('orders-grid');
+  const empty = document.getElementById('empty-state');
+  if (filtered.length === 0) { grid.style.display='none'; empty.style.display='block'; return; }
+  grid.style.display='grid'; empty.style.display='none';
+  grid.innerHTML = filtered.map(o => orderCard(o)).join('');
+};
+
+// ── واتساب Picker (بدون رقم محدد) ──
+window.sendWhatsAppPicker = function(oJson) {
+  let o;
+  try { o = JSON.parse(oJson.replace(/&quot;/g,'"').replace(/&#39;/g,"'")); } catch(e){ return; }
+
+  let cfg = {};
+  try { const s = JSON.parse(localStorage.getItem('altayar_settings')||'{}'); cfg = s.waSettings||{}; } catch(e){}
+
+  const show    = key => cfg[key] !== false;
+  const sep     = cfg.separator  || '━━━━━━━━━━━━━━';
+  const header  = cfg.headerText || '🛵 *الطيار ديليفري*';
+  const footer  = cfg.footerText || '✅ شكراً للطيار ديليفري ✈️';
+
+  const lines = [];
+  if (show('header'))  { lines.push(header); lines.push(sep); }
+  if (show('name'))    lines.push(`👤 *العميل:* ${o.name||'-'}`);
+  if (show('phone'))   lines.push(`📞 *التليفون:* ${o.phone||'-'}`);
+  if (show('from')||show('to')) lines.push(sep);
+  if (show('from'))    lines.push(`📦 *الاستلام من:*\n${o.from||'-'}`);
+  if (show('to'))      lines.push(`🏠 *التوصيل لـ:*\n${o.to||'-'}`);
+  lines.push(sep);
+  if (show('details') && o.details) lines.push(`📋 *الطلب:*\n${o.details}`);
+  if (show('type')   && o.type)     lines.push(`🏷️ *النوع:* ${o.type}`);
+  if (show('amount') && o.amount)   lines.push(`💰 *المبلغ:* ${o.amount} جنيه`);
+  if (show('time')   && o.time)     lines.push(`🕐 *الوقت:* ${o.time}`);
+  if (show('notes')  && o.notes)    lines.push(`📝 *ملاحظات:* ${o.notes}`);
+  if (show('footer')) { lines.push(sep); lines.push(footer); }
+
+  // لو في صوت مسجل نضيف ملاحظة
+  if (o.voiceDetails || o.voiceFrom || o.voiceTo) {
+    lines.push('🎙️ *ملاحظة:* الطلب فيه رسالة صوتية');
+  }
+
+  const msg = lines.join('\n');
+  // بدون رقم = بيفتح قائمة اختيار الواتساب
+  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
 };
 
 window.callClient = function(phone) {

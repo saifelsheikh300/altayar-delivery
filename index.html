@@ -366,9 +366,9 @@ window.submitOrder = async function() {
   const missing = [];
   if (isReq('client-name')   && !name)    missing.push('اسم العميل');
   if (isReq('client-phone')  && !phone)   missing.push('التليفون');
-  if (isReq('from-address')  && !from)    missing.push('عنوان الاستلام');
-  if (isReq('to-address')    && !to)      missing.push('عنوان التوصيل');
-  if (isReq('order-details') && !details) missing.push('تفاصيل الطلب');
+  if (isReq('from-address')  && !from   && !audioBlobs['from-address'])    missing.push('عنوان الاستلام');
+  if (isReq('to-address')    && !to     && !audioBlobs['to-address'])      missing.push('عنوان التوصيل');
+  if (isReq('order-details') && !details && !audioBlobs['order-details'])  missing.push('تفاصيل الطلب');
 
   if (missing.length) {
     alert('⚠️ من فضلك اكمل:\n' + missing.join('\n'));
