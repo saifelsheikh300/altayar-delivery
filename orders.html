@@ -125,14 +125,14 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 <script>
 (function(){
   if (window.location.protocol === 'file:') {
-    if (!sessionStorage.getItem('altayar_user')) {
-      sessionStorage.setItem('altayar_user', JSON.stringify({
+    if (!localStorage.getItem('altayar_user')) {
+      localStorage.setItem('altayar_user', JSON.stringify({
         uid:'local-test', name:'تجربة محلية', role:'super',
         canAccess:['admin.html','orders.html','index.html']
       }));
     }
   }
-  var u = sessionStorage.getItem('altayar_user');
+  var u = localStorage.getItem('altayar_user');
   if (!u) { window.location.href='login.html'; return; }
   var user = JSON.parse(u);
   if (!user.canAccess || user.canAccess.indexOf('orders.html') === -1) {
@@ -542,7 +542,7 @@ function sendPushNotif(order) {
 // ── User badge + logout ──
 window.doLogout = function() {
   if (confirm('عايز تخرج؟')) {
-    sessionStorage.removeItem('altayar_user');
+    localStorage.removeItem('altayar_user');
     window.location.href = 'login.html';
   }
 };
