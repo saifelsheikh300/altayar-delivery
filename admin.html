@@ -957,9 +957,6 @@ function collectSettings() {
     // Card order
     coIcon: get('co-icon'), coTitle: get('co-title'), coSub: get('co-sub'),
     coDetailsPh: get('co-details-ph'),
-    coAmountShow: getCheck('co-amount-show'),
-    coTimeShow: getCheck('co-time-show'),
-    coNotesShow: getCheck('co-notes-show'),
     // Chips
     orderTypes: getChips('chips-editor'),
     // Submit
@@ -1053,7 +1050,6 @@ window.addEventListener('load', () => {
     set('ca-divider-icon', s.caDividerIcon);
     set('co-icon', s.coIcon); set('co-title', s.coTitle); set('co-sub', s.coSub);
     set('co-details-ph', s.coDetailsPh);
-    setChk('co-amount-show', s.coAmountShow); setChk('co-time-show', s.coTimeShow); setChk('co-notes-show', s.coNotesShow);
     set('sb-text', s.sbText); set('sb-icon', s.sbIcon);
     set('sb-success-icon', s.sbSuccessIcon); set('sb-success-title', s.sbSuccessTitle); set('sb-close-text', s.sbCloseText);
     set('ft-text', s.ftText); setChk('ft-show', s.ftShow);

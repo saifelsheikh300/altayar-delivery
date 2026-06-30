@@ -330,14 +330,6 @@ window.startVoice = async function(fieldId, statusId, btn) {
   }
 };
 
-// ── إشعارات تلقائية عند فتح الصفحة ──
-(async function autoNotif() {
-  if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission();
-  }
-})();
-
 window.selectChip = function(el) {
   document.querySelectorAll('#type-chips .chip').forEach(c => c.classList.remove('active'));
   el.classList.add('active');

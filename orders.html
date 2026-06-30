@@ -192,7 +192,7 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, onSnapshot, doc, updateDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // Firebase config
 const firebaseConfig = {
@@ -212,9 +212,10 @@ let allOrders     = [];
 let currentFilter = 'all';
 let isFirstLoad   = true;
 let unsubscribe   = null;
+let authResolved  = false; // منع redirect قبل ما Firebase يحمل الـ session
 
 function startListening() {
-  if (unsubscribe) unsubscribe(); // امنع تكرار الـ listener
+  if (unsubscribe) unsubscribe();
   const q = query(collection(db,'orders'), orderBy('createdAt','desc'));
   unsubscribe = onSnapshot(q, snapshot => {
     const prev = allOrders.length;
@@ -233,24 +234,30 @@ function startListening() {
     document.getElementById('loading').innerHTML =
       `<div style="color:#ef4444;text-align:center;padding:20px">
         <div style="font-size:32px;margin-bottom:10px">🔒</div>
-        <div style="font-weight:800;margin-bottom:6px">غير مصرح</div>
-        <div style="font-size:12px;color:#666">${error.code}</div>
-        <button onclick="window.location.href='login.html'" style="margin-top:14px;background:var(--orange);border:none;border-radius:8px;padding:10px 20px;color:#fff;font-weight:800;cursor:pointer">🔐 سجل دخول</button>
+        <div style="font-weight:800;margin-bottom:6px">خطأ في الاتصال</div>
+        <div style="font-size:12px;color:#888">${error.code}</div>
+        <button onclick="window.location.href='login.html'" style="margin-top:14px;background:var(--orange);border:none;border-radius:8px;padding:10px 20px;color:#fff;font-weight:800;cursor:pointer">🔐 سجل دخول تاني</button>
       </div>`;
   });
 }
 
-// Firebase Auth بيحفظ الـ session تلقائي في localStorage
-// onAuthStateChanged هيشتغل تلقائي لو الـ user logged in قبل كده
 onAuthStateChanged(auth, user => {
+  authResolved = true;
   if (user) {
-    // ✅ logged in - ابدأ تجيب الأوردرات
     startListening();
   } else {
-    // ❌ مش logged in - روح login
+    // Firebase Auth مش عارفه — روح login
     window.location.href = 'login.html';
   }
 });
+
+// لو Firebase لم يرد في 8 ثواني، روح login
+setTimeout(() => {
+  if (!authResolved) {
+    console.warn('Auth timeout - redirecting to login');
+    window.location.href = 'login.html';
+  }
+}, 8000);
 
 function updateStats() {
   const today = new Date().toDateString();
@@ -264,28 +271,6 @@ function updateStats() {
   document.getElementById('stat-all').textContent      = todayOrders.length;
   document.getElementById('total-count').textContent   = allOrders.length + ' طلب';
 }
-
-window.renderOrders = function() {
-  const search = document.getElementById('search-input').value.toLowerCase();
-  let filtered = allOrders.filter(o => {
-    if (currentFilter !== 'all' && o.status !== currentFilter) return false;
-    if (search && !o.name?.toLowerCase().includes(search) && !o.phone?.includes(search)) return false;
-    return true;
-  });
-
-  const grid  = document.getElementById('orders-grid');
-  const empty = document.getElementById('empty-state');
-
-  if (filtered.length === 0) {
-    grid.style.display  = 'none';
-    empty.style.display = 'block';
-    return;
-  }
-
-  grid.style.display  = 'grid';
-  empty.style.display = 'none';
-  grid.innerHTML = filtered.map(o => orderCard(o)).join('');
-};
 
 function orderCard(o) {
   const time = o.createdAt ? new Date(o.createdAt.seconds*1000).toLocaleTimeString('ar-EG',{hour:'2-digit',minute:'2-digit'}) : '';
@@ -343,7 +328,6 @@ function orderCard(o) {
     </div>
   </div>`;
 }
-}
 
 window.updateStatus = async function(id, status) {
   try {
@@ -384,10 +368,8 @@ window.archiveOrder = function(id) {
   showNotif('🗂️ تم إخفاء الأوردر');
 };
 
-// فلتر الأرشيف من الـ render
-const _origRender = window.renderOrders;
+// renderOrders النهائي - بيراعي الأرشيف والفلتر والبحث
 window.renderOrders = function() {
-  // مش بنعرض المؤرشف
   const search = document.getElementById('search-input').value.toLowerCase();
   let filtered = allOrders.filter(o => {
     if (archivedIds.includes(o.id)) return false;
@@ -522,18 +504,13 @@ function sendPushNotif(order) {
   n.onclick = () => { window.focus(); n.close(); };
 }
 
-// تفعيل الإشعارات تلقائي عند فتح الصفحة
-(async function autoNotif() {
+// تحديث شكل الزرار بناءً على حالة الإذن الحالية (بدون طلب تلقائي)
+(function checkNotifStatus() {
   if (!('Notification' in window)) return;
-  if (Notification.permission === 'default') {
-    const perm = await Notification.requestPermission();
-    notifPermission = perm === 'granted';
-  } else {
-    notifPermission = Notification.permission === 'granted';
-  }
+  notifPermission = Notification.permission === 'granted';
   const btn = document.getElementById('notif-toggle-btn');
   if (btn) {
-    btn.textContent    = notifPermission ? '🔔 الإشعارات شغالة' : '🔕 فعّل الإشعارات';
+    btn.textContent      = notifPermission ? '🔔 الإشعارات شغالة' : '🔕 فعّل الإشعارات';
     btn.style.background = notifPermission ? 'rgba(34,197,94,.2)' : 'rgba(255,255,255,.1)';
     btn.style.color      = notifPermission ? '#22c55e' : '#fff';
   }
@@ -542,6 +519,7 @@ function sendPushNotif(order) {
 // ── User badge + logout ──
 window.doLogout = function() {
   if (confirm('عايز تخرج؟')) {
+    signOut(auth).catch(()=>{});
     localStorage.removeItem('altayar_user');
     window.location.href = 'login.html';
   }
