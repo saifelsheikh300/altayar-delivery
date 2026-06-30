@@ -208,41 +208,48 @@ const app  = initializeApp(firebaseConfig);
 const db   = getFirestore(app);
 const auth = getAuth(app);
 
-let allOrders   = [];
+let allOrders     = [];
 let currentFilter = 'all';
-let isFirstLoad = true;
+let isFirstLoad   = true;
+let unsubscribe   = null;
 
-// انتظر الـ auth الأول قبل ما تجيب الأوردرات
-onAuthStateChanged(auth, user => {
-  if (!user) {
-    // مش logged in - روح login
-    if (window.location.protocol !== 'file:') {
-      window.location.href = 'login.html';
-    }
-    return;
-  }
-
-  // Real-time listener بعد ما يتأكد الـ auth
+function startListening() {
+  if (unsubscribe) unsubscribe(); // امنع تكرار الـ listener
   const q = query(collection(db,'orders'), orderBy('createdAt','desc'));
-  onSnapshot(q, snapshot => {
+  unsubscribe = onSnapshot(q, snapshot => {
     const prev = allOrders.length;
     allOrders  = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-
     if (!isFirstLoad && allOrders.length > prev) {
-      const newest = allOrders[0];
       showNotif('🔔 طلب جديد وصل!');
-      sendPushNotif(newest);
+      sendPushNotif(allOrders[0]);
       try { new Audio('https://www.soundjay.com/buttons/sounds/button-09.mp3').play(); } catch(e){}
     }
     isFirstLoad = false;
-
     updateStats();
     renderOrders();
     document.getElementById('loading').style.display = 'none';
   }, error => {
-    console.error('Firestore error:', error);
-    document.getElementById('loading').innerHTML = '<div style="color:#ef4444;font-size:14px;font-weight:700">❌ خطأ في تحميل الأوردرات<br><small style="color:#666">تأكد من الـ Security Rules</small></div>';
+    console.error('Firestore:', error.code);
+    document.getElementById('loading').innerHTML =
+      `<div style="color:#ef4444;text-align:center;padding:20px">
+        <div style="font-size:32px;margin-bottom:10px">🔒</div>
+        <div style="font-weight:800;margin-bottom:6px">غير مصرح</div>
+        <div style="font-size:12px;color:#666">${error.code}</div>
+        <button onclick="window.location.href='login.html'" style="margin-top:14px;background:var(--orange);border:none;border-radius:8px;padding:10px 20px;color:#fff;font-weight:800;cursor:pointer">🔐 سجل دخول</button>
+      </div>`;
   });
+}
+
+// Firebase Auth بيحفظ الـ session تلقائي في localStorage
+// onAuthStateChanged هيشتغل تلقائي لو الـ user logged in قبل كده
+onAuthStateChanged(auth, user => {
+  if (user) {
+    // ✅ logged in - ابدأ تجيب الأوردرات
+    startListening();
+  } else {
+    // ❌ مش logged in - روح login
+    window.location.href = 'login.html';
+  }
 });
 
 function updateStats() {
