@@ -129,12 +129,33 @@ select.ctrl-input{cursor:pointer}
 .pl-orders{background:var(--card2);color:var(--text);border:1px solid var(--border)}
 .pl-orders:hover{background:var(--card)}
 
+/* ═══════ RESPONSIVE BREAKPOINTS ═══════ */
+
+/* موبايل */
 @media(max-width:768px){
   .layout{flex-direction:column}
-  .sidebar{width:100%;border-left:none;border-bottom:1px solid var(--border)}
+  .sidebar{width:100%;border-left:none;border-bottom:1px solid var(--border);max-height:200px;overflow-y:auto}
   .sidebar-nav{flex-direction:row;flex-wrap:wrap;padding:8px}
   .nav-section{display:none}
   .nav-btn{padding:7px 12px;font-size:12px}
+  .header-actions{flex-wrap:wrap;gap:6px}
+  .hbtn{padding:7px 12px;font-size:12px}
+  .editor-area{padding:14px}
+  .ctrl-row-2,.ctrl-row-3{grid-template-columns:1fr}
+}
+
+/* تابلت */
+@media(min-width:769px) and (max-width:1024px){
+  .sidebar{width:240px}
+  .editor-area{padding:18px}
+  .layout{max-width:100%}
+}
+
+/* كمبيوتر / شاشات كبيرة */
+@media(min-width:1025px){
+  .layout{max-width:1500px}
+  .sidebar{width:320px}
+  .editor-area{padding:24px 32px}
 }
 </style>
 </head>

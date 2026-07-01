@@ -110,15 +110,54 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 .btn-whatsapp:hover{background:#25d366;color:#fff}
 
 /* 3 نقط */
-.dot-menu-wrap{position:relative;margin-right:auto}
-.dot-menu-btn{background:transparent;border:none;color:var(--text-mid);font-size:22px;cursor:pointer;padding:0 6px;line-height:1;border-radius:6px;transition:background .15s}
+.dot-menu-wrap{position:relative;margin-right:auto;z-index:10}
+.dot-menu-btn{background:transparent;border:none;color:var(--text-mid);font-size:22px;cursor:pointer;padding:2px 8px;line-height:1;border-radius:6px;transition:background .15s}
 .dot-menu-btn:hover{background:var(--card2);color:var(--text)}
-.dot-menu{display:none;position:absolute;top:110%;right:0;background:#1e1e1e;border:1px solid var(--border);border-radius:10px;min-width:160px;z-index:99;box-shadow:0 8px 24px rgba(0,0,0,.5);overflow:hidden}
+.dot-menu{display:none;position:absolute;top:calc(100% + 4px);left:0;background:#222;border:1px solid var(--border);border-radius:10px;min-width:170px;z-index:9999;box-shadow:0 10px 30px rgba(0,0,0,.6);overflow:hidden}
 .dot-menu.open{display:block}
-.dot-menu button{display:block;width:100%;background:transparent;border:none;color:var(--text);font-size:13px;font-weight:700;padding:11px 16px;text-align:right;cursor:pointer;transition:background .15s}
+.dot-menu button{display:block;width:100%;background:transparent;border:none;color:var(--text);font-size:13px;font-weight:700;padding:12px 16px;text-align:right;cursor:pointer;transition:background .15s;white-space:nowrap}
 .dot-menu button:hover{background:var(--card2)}
 
-@media(max-width:600px){.stats-bar{grid-template-columns:1fr 1fr}.orders-grid{grid-template-columns:1fr}.stat-num{font-size:20px}}
+/* السماح للقائمة بالظهور برا حدود الكارت */
+.order-card{overflow:visible}
+.order-top{position:relative;overflow:visible}
+
+/* ═══════ RESPONSIVE BREAKPOINTS ═══════ */
+
+/* موبايل صغير */
+@media(max-width:480px){
+  .stats-bar{grid-template-columns:1fr 1fr;gap:8px}
+  .orders-grid{grid-template-columns:1fr}
+  .stat-num{font-size:20px}
+  .header-inner{padding:10px 14px;flex-wrap:wrap;gap:8px}
+  .filters{gap:6px}
+  .filter-btn{padding:6px 12px;font-size:12px}
+  .dot-menu{left:auto;right:0;min-width:150px}
+}
+
+/* موبايل كبير / تابلت صغير */
+@media(min-width:481px) and (max-width:768px){
+  .stats-bar{grid-template-columns:repeat(4,1fr)}
+  .orders-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+}
+
+/* تابلت */
+@media(min-width:769px) and (max-width:1024px){
+  .orders-section{max-width:95%}
+  .orders-grid{grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px}
+  .stats-bar{max-width:95%}
+  .filters{max-width:95%}
+  .dot-menu{min-width:180px}
+}
+
+/* كمبيوتر / شاشات كبيرة */
+@media(min-width:1025px){
+  .orders-section{max-width:1300px}
+  .orders-grid{grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:18px}
+  .stats-bar{max-width:1300px}
+  .filters{max-width:1300px}
+  .header-inner{max-width:1300px}
+}
 </style>
 </head>
 <body>
@@ -385,7 +424,7 @@ window.renderOrders = function() {
 };
 
 // ── واتساب Picker (بدون رقم محدد) ──
-window.sendWhatsAppPicker = function(oJson) {
+window.sendWhatsAppPicker = async function(oJson) {
   let o;
   try { o = JSON.parse(oJson.replace(/&quot;/g,'"').replace(/&#39;/g,"'")); } catch(e){ return; }
 
@@ -412,14 +451,66 @@ window.sendWhatsAppPicker = function(oJson) {
   if (show('notes')  && o.notes)    lines.push(`📝 *ملاحظات:* ${o.notes}`);
   if (show('footer')) { lines.push(sep); lines.push(footer); }
 
-  // لو في صوت مسجل نضيف ملاحظة
-  if (o.voiceDetails || o.voiceFrom || o.voiceTo) {
-    lines.push('🎙️ *ملاحظة:* الطلب فيه رسالة صوتية');
+  const hasVoice = o.voiceDetails || o.voiceFrom || o.voiceTo;
+
+  if (hasVoice) {
+    lines.push('🎙️ *ملاحظة:* في رسالة صوتية مرفوعة مع الطلب');
   }
 
   const msg = lines.join('\n');
-  // بدون رقم = بيفتح قائمة اختيار الواتساب
-  window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+
+  // لو مفيش صوت، إرسال نص عادي عبر wa.me
+  if (!hasVoice) {
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    return;
+  }
+
+  // لو في صوت: نحاول نستخدم Web Share API (بيشارك ملف صوتي حقيقي + نص)
+  // ده بيفتح قائمة مشاركة حقيقية تقدر تختار منها واتساب وهيبعت الصوت فعلاً كملف
+  try {
+    const audioData = o.voiceDetails || o.voiceFrom || o.voiceTo;
+    const audioLabel = o.voiceDetails ? 'تفاصيل الطلب' : (o.voiceFrom ? 'عنوان الاستلام' : 'عنوان التوصيل');
+
+    // تحويل base64 data URL لـ File
+    const res = await fetch(audioData);
+    const blob = await res.blob();
+    const file = new File([blob], `voice-${o.id || Date.now()}.webm`, { type: blob.type || 'audio/webm' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({
+        files: [file],
+        text: msg,
+        title: `🎙️ صوت ${audioLabel} - ${o.name || 'طلب'}`
+      });
+      showNotif('✅ اختر واتساب من القائمة لإرسال الصوت');
+    } else {
+      // المتصفح مش بيدعم مشاركة ملفات - نفتح واتساب بالنص ونعرض الصوت يدوي
+      window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+      showAudioShareModal(audioData, audioLabel, o.name);
+    }
+  } catch(e) {
+    console.error('Share error:', e);
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+    const audioData = o.voiceDetails || o.voiceFrom || o.voiceTo;
+    showAudioShareModal(audioData, 'الرسالة الصوتية', o.name);
+  }
+};
+
+// نافذة بديلة لو المتصفح مش بيدعم مشاركة الملفات: نزّل الصوت يدوي وابعته
+window.showAudioShareModal = function(audioData, label, name) {
+  const modal = document.createElement('div');
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:#1a1a1a;border-radius:16px;padding:24px;max-width:340px;width:100%;text-align:center;border:1px solid #2a2a2a">
+      <div style="font-size:36px;margin-bottom:10px">🎙️</div>
+      <div style="font-weight:800;margin-bottom:6px;color:#fff">${label}</div>
+      <div style="font-size:12px;color:#888;margin-bottom:16px">متصفحك مش بيدعم مشاركة الملفات مباشرة. نزّل الصوت وابعته يدوي في واتساب اللي فتح.</div>
+      <audio controls src="${audioData}" style="width:100%;margin-bottom:14px"></audio>
+      <a href="${audioData}" download="voice-${name||'order'}.webm" style="display:block;background:#FF4500;color:#fff;text-decoration:none;border-radius:10px;padding:11px;font-weight:800;margin-bottom:8px">⬇️ تحميل الصوت</a>
+      <button onclick="this.closest('div').parentElement.remove()" style="background:#222;border:1px solid #333;color:#fff;border-radius:10px;padding:10px;width:100%;cursor:pointer;font-weight:700">إغلاق</button>
+    </div>`;
+  document.body.appendChild(modal);
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
 };
 
 window.callClient = function(phone) {
@@ -438,44 +529,6 @@ function showNotif(msg) {
   n.textContent = msg; n.classList.add('show');
   setTimeout(() => n.classList.remove('show'), 3000);
 }
-
-// ── واتساب ──
-window.sendWhatsApp = function(o) {
-  const phone = (o.phone || '').replace(/[^0-9]/g,'');
-  let wa = phone;
-  if (wa.startsWith('0')) wa = '2' + wa;
-  if (!wa.startsWith('20')) wa = '20' + wa;
-
-  // تحميل إعدادات الواتساب من الأدمن
-  let cfg = {};
-  try {
-    const s = JSON.parse(localStorage.getItem('altayar_settings') || '{}');
-    cfg = s.waSettings || {};
-  } catch(e){}
-
-  const show    = key => cfg[key] !== false;
-  const sep     = cfg.separator   || '━━━━━━━━━━━━━━';
-  const header  = cfg.headerText  || '🛵 *الطيار ديليفري*';
-  const footer  = cfg.footerText  || '✅ شكراً للطيار ديليفري ✈️';
-
-  const lines = [];
-  if (show('header'))  { lines.push(header); lines.push(sep); }
-  if (show('name'))    lines.push(`👤 *العميل:* ${o.name||'-'}`);
-  if (show('phone'))   lines.push(`📞 *التليفون:* ${o.phone||'-'}`);
-  if (show('from')||show('to')) lines.push(sep);
-  if (show('from'))    lines.push(`📦 *الاستلام من:*\n${o.from||'-'}`);
-  if (show('to'))      lines.push(`🏠 *التوصيل لـ:*\n${o.to||'-'}`);
-  lines.push(sep);
-  if (show('details') && o.details) lines.push(`📋 *الطلب:*\n${o.details}`);
-  if (show('type')   && o.type)     lines.push(`🏷️ *النوع:* ${o.type}`);
-  if (show('amount') && o.amount)   lines.push(`💰 *المبلغ:* ${o.amount} جنيه`);
-  if (show('time')   && o.time)     lines.push(`🕐 *الوقت:* ${o.time}`);
-  if (show('notes')  && o.notes)    lines.push(`📝 *ملاحظات:* ${o.notes}`);
-  if (show('footer')) { lines.push(sep); lines.push(footer); }
-
-  const msg = lines.join('\n');
-  window.open(`https://wa.me/${wa}?text=${encodeURIComponent(msg)}`, '_blank');
-};
 
 // ── إشعارات Push ──
 let notifPermission = false;
