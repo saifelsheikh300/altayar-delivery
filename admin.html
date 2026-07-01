@@ -160,6 +160,49 @@ select.ctrl-input{cursor:pointer}
 </style>
 </head>
 <body>
+
+<!-- Firebase للـ settings -->
+<script type="module" id="firebase-settings-module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBuKW9vBGj_q1LIE5QrRtFmpsJ5Ifg6D4w",
+  authDomain: "altayar-delivery.firebaseapp.com",
+  projectId: "altayar-delivery",
+  storageBucket: "altayar-delivery.firebasestorage.app",
+  messagingSenderId: "244765017519",
+  appId: "1:244765017519:web:62ded292f78c9be40c5b5a"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// حفظ الإعدادات في Firestore
+window.saveSettingsToFirebase = async function(settings) {
+  try {
+    await setDoc(doc(db, 'settings', 'main'), settings);
+    console.log('Settings saved to Firestore ✅');
+    return true;
+  } catch(e) {
+    console.error('Save error:', e);
+    return false;
+  }
+};
+
+// تحميل الإعدادات من Firestore
+window.loadSettingsFromFirebase = async function() {
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'main'));
+    if (snap.exists()) return snap.data();
+    return null;
+  } catch(e) {
+    console.error('Load error:', e);
+    return null;
+  }
+};
+</script>
+
 <script>
 (function(){
   if (window.location.protocol === 'file:') {
@@ -996,16 +1039,22 @@ function collectSettings() {
 }
 
 // SAVE
-function saveAll() {
+async function saveAll() {
   const s = collectSettings();
+  // حفظ محلي فوري
   localStorage.setItem('altayar_settings', JSON.stringify(s));
-  // أبلغ كل التابات الثانية بالتحديث فوراً
+  // حفظ في Firestore عشان كل الأجهزة تشوفه
+  const btn = document.querySelector('.hbtn-save');
+  if (btn) { btn.textContent = '⏳ جاري الحفظ...'; btn.style.opacity='.7'; }
+  const ok = await (window.saveSettingsToFirebase ? window.saveSettingsToFirebase(s) : Promise.resolve(false));
+  if (btn) { btn.textContent = '💾 حفظ التغييرات'; btn.style.opacity='1'; }
+  // أبلغ التابات الثانية
   try {
     const bc = new BroadcastChannel('altayar_settings_channel');
     bc.postMessage('updated');
     bc.close();
   } catch(e) {}
-  showToast('✅ تم الحفظ بنجاح!');
+  showToast(ok ? '✅ تم الحفظ على كل الأجهزة!' : '✅ تم الحفظ محلياً');
 }
 
 function applyAndPreview() {
@@ -1013,12 +1062,19 @@ function applyAndPreview() {
   window.open('index.html');
 }
 
-// LOAD SAVED
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('altayar_settings');
-  if (!saved) return;
-  try {
-    const s = JSON.parse(saved);
+// LOAD SAVED - من Firestore أولاً، لو مفيش نجيب من localStorage
+window.addEventListener('load', async () => {
+  let s = null;
+  // حاول تجيب من Firestore
+  if (window.loadSettingsFromFirebase) {
+    s = await window.loadSettingsFromFirebase();
+  }
+  // لو مش موجود في Firestore، جيب من localStorage
+  if (!s) {
+    const saved = localStorage.getItem('altayar_settings');
+    if (saved) { try { s = JSON.parse(saved); } catch(e){} }
+  }
+  if (!s) return;
     const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
     const setChk = (id, val) => { const el=document.getElementById(id); if(el) el.checked=val; };
     set('g-page-title', s.pageTitle); set('g-footer', s.footer);
@@ -1047,7 +1103,9 @@ window.addEventListener('load', () => {
     set('sb-text', s.sbText); set('sb-icon', s.sbIcon);
     set('sb-success-icon', s.sbSuccessIcon); set('sb-success-title', s.sbSuccessTitle); set('sb-close-text', s.sbCloseText);
     set('ft-text', s.ftText); setChk('ft-show', s.ftShow);
-  } catch(e) { console.error(e); }
+
+  // حفظ في localStorage كـ cache
+  localStorage.setItem('altayar_settings', JSON.stringify(s));
 });
 
 // User badge + logout

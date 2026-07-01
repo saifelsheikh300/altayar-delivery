@@ -411,33 +411,41 @@ window.closeSuccess = function() {
 };
 </script>
 
-<script>
-// ── Apply admin settings ──
-function applySettings() {
-  const saved = localStorage.getItem('altayar_settings');
-  if (!saved) return;
+<script type="module">
+import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, getDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBuKW9vBGj_q1LIE5QrRtFmpsJ5Ifg6D4w",
+  authDomain: "altayar-delivery.firebaseapp.com",
+  projectId: "altayar-delivery",
+  storageBucket: "altayar-delivery.firebasestorage.app",
+  messagingSenderId: "244765017519",
+  appId: "1:244765017519:web:62ded292f78c9be40c5b5a"
+};
+
+const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db  = getFirestore(app);
+
+// تطبيق الإعدادات
+function applySettings(s) {
+  if (!s) return;
   try {
-    const s = JSON.parse(saved);
     const show = (sel, visible) => { document.querySelectorAll(sel).forEach(el => el.style.display = visible ? '' : 'none'); };
-
     if (s.pageTitle) document.title = s.pageTitle;
-
     const r = document.documentElement.style;
     if (s.orange)      r.setProperty('--orange', s.orange);
     if (s.orangeDark)  r.setProperty('--orange-dark', s.orangeDark);
     if (s.orangeLight) r.setProperty('--orange-light', s.orangeLight);
     if (s.bg)          r.setProperty('--off-white', s.bg);
-
     if (s.logoFontSize)  document.querySelector('.logo-main') && (document.querySelector('.logo-main').style.fontSize = s.logoFontSize);
     if (s.heroFontSize)  document.querySelector('.hero h1')   && (document.querySelector('.hero h1').style.fontSize = s.heroFontSize);
     if (s.cardTitleSize) document.querySelectorAll('.card-title').forEach(el => el.style.fontSize = s.cardTitleSize);
     if (s.labelSize)     document.querySelectorAll('label').forEach(el => el.style.fontSize = s.labelSize);
     if (s.submitSize)    document.querySelector('.submit-btn') && (document.querySelector('.submit-btn').style.fontSize = s.submitSize);
-
     if (s.logoMain)   document.querySelector('.logo-main') && (document.querySelector('.logo-main').textContent = s.logoMain);
     if (s.logoSub)    document.querySelector('.logo-sub')  && (document.querySelector('.logo-sub').textContent  = s.logoSub);
     if (s.headerIcon) document.querySelector('.logo-icon') && (document.querySelector('.logo-icon').textContent  = s.headerIcon);
-
     if (s.heroTitle) document.querySelector('.hero h1') && (document.querySelector('.hero h1').textContent = s.heroTitle);
     if (s.heroSub)   document.querySelector('.hero p')  && (document.querySelector('.hero p').textContent  = s.heroSub);
     if (s.heroShowSteps === false) show('.steps-row', false);
@@ -449,7 +457,6 @@ function applySettings() {
       const hero = document.querySelector('.hero');
       if (hero) hero.style.background = `linear-gradient(${s.heroGradientDir}, var(--orange-dark), var(--orange) 60%, var(--orange-light))`;
     }
-
     if (s.ccIcon)  document.querySelectorAll('.card-icon')[0]     && (document.querySelectorAll('.card-icon')[0].textContent     = s.ccIcon);
     if (s.ccTitle) document.querySelectorAll('.card-title')[0]    && (document.querySelectorAll('.card-title')[0].textContent    = s.ccTitle);
     if (s.ccSub)   document.querySelectorAll('.card-subtitle')[0] && (document.querySelectorAll('.card-subtitle')[0].textContent = s.ccSub);
@@ -457,34 +464,27 @@ function applySettings() {
     if (s.ccNamePh  && document.getElementById('client-name'))   document.getElementById('client-name').placeholder  = s.ccNamePh;
     if (s.ccPhonePh && document.getElementById('client-phone'))  document.getElementById('client-phone').placeholder = s.ccPhonePh;
     if (s.ccPhoneShow === false) document.getElementById('client-phone')?.closest('.field') && (document.getElementById('client-phone').closest('.field').style.display='none');
-
     if (s.caFromPh && document.getElementById('from-address')) document.getElementById('from-address').placeholder = s.caFromPh;
     if (s.caToPh   && document.getElementById('to-address'))   document.getElementById('to-address').placeholder   = s.caToPh;
     if (s.caDividerIcon) document.querySelector('.divider-icon') && (document.querySelector('.divider-icon').textContent = s.caDividerIcon);
     if (s.caFromVoice === false) document.getElementById('from-address')?.parentElement?.querySelector('.voice-btn') && (document.getElementById('from-address').parentElement.querySelector('.voice-btn').style.display='none');
     if (s.caToVoice   === false) document.getElementById('to-address')?.parentElement?.querySelector('.voice-btn')   && (document.getElementById('to-address').parentElement.querySelector('.voice-btn').style.display='none');
-
     if (s.coDetailsPh && document.getElementById('order-details')) document.getElementById('order-details').placeholder = s.coDetailsPh;
-    if (s.coAmountShow === false) document.getElementById('amount')?.closest('.field')          && (document.getElementById('amount').closest('.field').style.display='none');
-    if (s.coTimeShow   === false) document.getElementById('delivery-time')?.closest('.field')   && (document.getElementById('delivery-time').closest('.field').style.display='none');
-    if (s.coNotesShow  === false) document.getElementById('notes')?.closest('.field')           && (document.getElementById('notes').closest('.field').style.display='none');
-
+    if (s.coAmountShow === false) document.getElementById('amount')?.closest('.field')        && (document.getElementById('amount').closest('.field').style.display='none');
+    if (s.coTimeShow   === false) document.getElementById('delivery-time')?.closest('.field') && (document.getElementById('delivery-time').closest('.field').style.display='none');
+    if (s.coNotesShow  === false) document.getElementById('notes')?.closest('.field')         && (document.getElementById('notes').closest('.field').style.display='none');
     if (s.orderTypes && s.orderTypes.length) {
       const chipsRow = document.getElementById('type-chips');
       if (chipsRow) chipsRow.innerHTML = s.orderTypes.map((t,i)=>`<button class="chip${i===0?' active':''}" onclick="selectChip(this)">${t}</button>`).join('');
     }
-
     if (s.sbText && document.querySelectorAll('.submit-btn span')[0]) document.querySelectorAll('.submit-btn span')[0].textContent = s.sbText;
     if (s.sbIcon && document.querySelectorAll('.submit-btn span')[1]) document.querySelectorAll('.submit-btn span')[1].textContent = s.sbIcon;
     if (s.sbSuccessIcon)  document.querySelector('.success-icon')  && (document.querySelector('.success-icon').textContent  = s.sbSuccessIcon);
     if (s.sbSuccessTitle) document.querySelector('.success-title') && (document.querySelector('.success-title').textContent = s.sbSuccessTitle);
     if (s.sbCloseText)    document.querySelector('.success-close') && (document.querySelector('.success-close').textContent = s.sbCloseText);
-
     if (s.ftText)           document.querySelector('footer') && (document.querySelector('footer').textContent = s.ftText);
     if (s.ftShow === false) document.querySelector('footer') && (document.querySelector('footer').style.display='none');
-
     if (s.maxWidth) document.querySelectorAll('main, .header-inner').forEach(el => el.style.maxWidth = s.maxWidth);
-
     if (s.sectionOrder) {
       const main = document.querySelector('main');
       const cards = [...main.querySelectorAll('.card')];
@@ -498,7 +498,6 @@ function applySettings() {
     }
     const submitWrap = document.getElementById('submit-wrap');
     if (submitWrap) document.querySelector('main').appendChild(submitWrap);
-
     if (s.fieldsControl) {
       const fc = s.fieldsControl;
       const applyField = (id, cfg) => {
@@ -531,22 +530,32 @@ function applySettings() {
   } catch(e) { console.error('Settings error:', e); }
 }
 
-// تطبيق الإعدادات بعد ما الـ DOM يكمل كامل
-if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', applySettings);
-} else {
-  applySettings();
-}
-
-// تحديث تلقائي لو الأدمن غيّر حاجة
-window.addEventListener('storage', e => {
-  if (e.key === 'altayar_settings') applySettings();
+// جيب الإعدادات من Firestore وطبّقها فوراً + اسمع للتغييرات
+onSnapshot(doc(db, 'settings', 'main'), snap => {
+  if (snap.exists()) {
+    const s = snap.data();
+    localStorage.setItem('altayar_settings', JSON.stringify(s));
+    applySettings(s);
+  }
+}, error => {
+  // fallback لـ localStorage
+  const saved = localStorage.getItem('altayar_settings');
+  if (saved) { try { applySettings(JSON.parse(saved)); } catch(e){} }
 });
 
-// BroadcastChannel للتحديث الفوري بين التابات
+// تطبيق فوري من localStorage لحد ما Firestore يرد
+(function(){
+  const saved = localStorage.getItem('altayar_settings');
+  if (saved) { try { applySettings(JSON.parse(saved)); } catch(e){} }
+})();
+
+// BroadcastChannel للتحديث بين التابات
 try {
   const bc = new BroadcastChannel('altayar_settings_channel');
-  bc.onmessage = () => applySettings();
+  bc.onmessage = () => {
+    const saved = localStorage.getItem('altayar_settings');
+    if (saved) { try { applySettings(JSON.parse(saved)); } catch(e){} }
+  };
 } catch(e) {}
 </script>
 
