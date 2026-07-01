@@ -750,52 +750,25 @@ select.ctrl-input{cursor:pointer}
 
     <!-- USERS PANEL -->
     <div class="section-panel" id="panel-users">
-      <div class="panel-title"><span class="icon">👥</span> إدارة المستخدمين</div>
+      <div class="panel-title"><span class="icon">👥</span> المستخدمين</div>
 
       <div class="ctrl-group">
-        <div class="ctrl-group-header">⚠️ التغييرات بتتحفظ في المتصفح — بعد التعديل انسخ الكود لـ login.html</div>
+        <div class="ctrl-group-header">فريق العمل — البيانات من Firebase مباشرة</div>
         <div class="ctrl-group-body">
-          <div id="users-list"></div>
-          <button class="toggle-form-btn" onclick="toggleAddForm()">➕ إضافة مستخدم جديد</button>
-
-          <div class="add-user-form" id="add-user-form">
-            <div class="form-row">
-              <div class="ctrl-row">
-                <div class="ctrl-label">اسم المستخدم</div>
-                <input class="ctrl-input" id="new-username" placeholder="username">
-              </div>
-              <div class="ctrl-row">
-                <div class="ctrl-label">كلمة المرور</div>
-                <input class="ctrl-input" id="new-password" placeholder="password@2025">
-              </div>
+          <div id="users-list">
+            <div style="text-align:center;padding:20px;color:var(--text-mid)">
+              <div style="font-size:28px;margin-bottom:8px">⏳</div>
+              <div style="font-size:13px;font-weight:600">جاري التحميل...</div>
             </div>
-            <div class="form-row">
-              <div class="ctrl-row">
-                <div class="ctrl-label">الاسم بالعربي</div>
-                <input class="ctrl-input" id="new-name" placeholder="مثال: أحمد المندوب">
-              </div>
-              <div class="ctrl-row">
-                <div class="ctrl-label">الدور</div>
-                <select class="ctrl-input" id="new-role">
-                  <option value="super">👑 سوبر أدمن</option>
-                  <option value="admin">🧑‍💼 أدمن</option>
-                  <option value="driver" selected>🛵 مندوب</option>
-                </select>
-              </div>
+          </div>
+          <div style="margin-top:14px;background:var(--bg);border-radius:10px;padding:12px;border:1px solid var(--border)">
+            <div style="font-size:12px;font-weight:700;color:var(--text-mid);margin-bottom:8px">➕ لإضافة مستخدم جديد:</div>
+            <div style="font-size:12px;color:var(--text-mid);line-height:1.9">
+              1️⃣ Firebase Console → Authentication → Add user<br>
+              2️⃣ Firestore → users → Add document (UID + role + name)<br>
+              3️⃣ الـ role بيكون: <span style="color:var(--orange);font-weight:800">super</span> أو <span style="color:#60a5fa;font-weight:800">admin</span> أو <span style="color:var(--green);font-weight:800">driver</span>
             </div>
-            <button class="add-user-btn-main" onclick="addUser()">✅ إضافة المستخدم</button>
           </div>
-        </div>
-      </div>
-
-      <div class="ctrl-group">
-        <div class="ctrl-group-header">📋 كود login.html الجاهز للنسخ</div>
-        <div class="ctrl-group-body">
-          <div class="ctrl-row">
-            <div class="ctrl-label">انسخ الكود ده وحطه في login.html بدل const USERS</div>
-            <textarea class="ctrl-input" id="users-code-output" style="min-height:160px;font-size:11px;direction:ltr" readonly></textarea>
-          </div>
-          <button class="add-user-btn-main" onclick="copyUsersCode()">📋 نسخ الكود</button>
         </div>
       </div>
     </div>
@@ -1101,92 +1074,60 @@ window.doLogout = function() {
 })();
 
 // =========================================
-// 👥 USERS MANAGEMENT
+// 👥 USERS — قراءة من Firestore مباشرة
 // =========================================
-const DEFAULT_USERS = [];
-
-function loadUsers() {
-  const saved = localStorage.getItem('altayar_users');
-  return saved ? JSON.parse(saved) : DEFAULT_USERS;
-}
-function saveUsers(users) {
-  localStorage.setItem('altayar_users', JSON.stringify(users));
-  renderUsers();
-}
-function renderUsers() {
-  const users = loadUsers();
-  const icons = {super:'👑',admin:'🧑‍💼',driver:'🛵'};
-  const names = {super:'سوبر أدمن',admin:'أدمن',driver:'مندوب'};
+async function loadFirebaseUsers() {
   const list = document.getElementById('users-list');
   if (!list) return;
-  list.innerHTML = users.map((u,i) => `
-    <div class="user-card">
-      <div class="user-avatar">${icons[u.role]||'👤'}</div>
-      <div class="user-info">
-        <div class="user-name">${u.name}</div>
-        <div>
-          <span class="user-role-badge role-${u.role}">${names[u.role]}</span>
-          <span style="font-size:11px;color:var(--text-mid);margin-right:8px">@${u.username}</span>
-          <span style="font-size:11px;color:var(--text-dim)">🔑 ${u.password}</span>
+  try {
+    const { initializeApp, getApps } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js");
+    const { getFirestore, collection, getDocs } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBuKW9vBGj_q1LIE5QrRtFmpsJ5Ifg6D4w",
+      authDomain: "altayar-delivery.firebaseapp.com",
+      projectId: "altayar-delivery",
+      storageBucket: "altayar-delivery.firebasestorage.app",
+      messagingSenderId: "244765017519",
+      appId: "1:244765017519:web:62ded292f78c9be40c5b5a"
+    };
+
+    const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+    const db  = getFirestore(app);
+    const snap = await getDocs(collection(db, 'users'));
+
+    const icons = { super:'👑', admin:'🧑‍💼', driver:'🛵' };
+    const names = { super:'سوبر أدمن', admin:'أدمن', driver:'مندوب' };
+    const colors = { super:'var(--orange)', admin:'#60a5fa', driver:'var(--green)' };
+
+    if (snap.empty) {
+      list.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-mid);font-size:13px">مفيش مستخدمين في Firebase دلوقتي</div>`;
+      return;
+    }
+
+    list.innerHTML = snap.docs.map(d => {
+      const u = d.data();
+      const role = u.role || 'driver';
+      return `
+      <div class="user-card">
+        <div class="user-avatar" style="border-color:${colors[role]||'var(--border)'}">${icons[role]||'👤'}</div>
+        <div class="user-info">
+          <div class="user-name">${u.name || 'بدون اسم'}</div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="user-role-badge role-${role}">${names[role]||role}</span>
+            <span style="font-size:11px;color:var(--text-mid)">${u.email||''}</span>
+          </div>
         </div>
-      </div>
-      <div class="user-actions">
-        <button class="ubtn ubtn-edit" onclick="editUser(${i})">✏️ تعديل</button>
-        ${users.length>1?`<button class="ubtn ubtn-del" onclick="deleteUser(${i})">🗑️ حذف</button>`:''}
-      </div>
-    </div>`).join('');
-  generateCode(users);
+        <div style="font-size:11px;color:var(--text-dim);font-family:monospace">${d.id.slice(0,8)}...</div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    console.error(e);
+    list.innerHTML = `<div style="color:var(--red);text-align:center;padding:16px;font-size:13px;font-weight:700">❌ تعذّر تحميل المستخدمين<br><small style="color:var(--text-mid);font-weight:400">تأكد من الاتصال بالإنترنت والـ Security Rules</small></div>`;
+  }
 }
-function generateCode(users) {
-  const out = document.getElementById('users-code-output');
-  if (!out) return;
-  out.value = 'const USERS = ' + JSON.stringify(users, null, 2) + ';';
-}
-function toggleAddForm() {
-  document.getElementById('add-user-form').classList.toggle('show');
-}
-function addUser() {
-  const username = document.getElementById('new-username').value.trim();
-  const password = document.getElementById('new-password').value.trim();
-  const name     = document.getElementById('new-name').value.trim();
-  const role     = document.getElementById('new-role').value;
-  if (!username||!password||!name){alert('⚠️ اكمل كل الحقول');return;}
-  const users = loadUsers();
-  if (users.find(u=>u.username===username)){alert('❌ اليوزرنيم موجود');return;}
-  const accessMap = {super:['admin.html','orders.html','index.html'],admin:['orders.html','index.html'],driver:['orders.html']};
-  const redirMap  = {super:'admin.html',admin:'orders.html',driver:'orders.html'};
-  users.push({username,password,role,name,redirect:redirMap[role],canAccess:accessMap[role]});
-  saveUsers(users);
-  document.getElementById('new-username').value='';
-  document.getElementById('new-password').value='';
-  document.getElementById('new-name').value='';
-  document.getElementById('add-user-form').classList.remove('show');
-  showToast('✅ تم إضافة المستخدم!');
-}
-function editUser(i) {
-  const users = loadUsers();
-  const u = users[i];
-  const newPass = prompt(`باسورد جديد لـ "${u.name}" (فاضي = نفس الباسورد):`, '');
-  if (newPass===null) return;
-  const newName = prompt('الاسم الجديد:', u.name);
-  if (newName===null) return;
-  if (newPass) users[i].password = newPass;
-  if (newName) users[i].name = newName;
-  saveUsers(users);
-  showToast('✅ تم التعديل!');
-}
-function deleteUser(i) {
-  const users = loadUsers();
-  if (!confirm(`مسح "${users[i].name}"؟`)) return;
-  users.splice(i,1);
-  saveUsers(users);
-  showToast('🗑️ تم الحذف');
-}
-function copyUsersCode() {
-  const out = document.getElementById('users-code-output');
-  out.select(); document.execCommand('copy');
-  showToast('📋 تم النسخ! حطه في login.html بدل const USERS');
-}
+
 function previewWA() {
   const g = id => { const el=document.getElementById(id); return el?el.checked:true; };
   const t = id => { const el=document.getElementById(id); return el?el.value:''; };
@@ -1209,7 +1150,9 @@ function previewWA() {
 }
 
 window.addEventListener('load', () => {
-  renderUsers();
+  // جيب المستخدمين من Firebase
+  loadFirebaseUsers();
+
   // تحميل إعدادات WA
   const saved = localStorage.getItem('altayar_settings');
   if (saved) {
