@@ -161,10 +161,11 @@ select.ctrl-input{cursor:pointer}
 </head>
 <body>
 
-<!-- Firebase للـ settings -->
-<script type="module" id="firebase-settings-module">
-import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+<!-- Firebase للـ settings - ده بيشتغل أول حاجة -->
+<script type="module">
+import { initializeApp, getApps }        from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBuKW9vBGj_q1LIE5QrRtFmpsJ5Ifg6D4w",
@@ -175,32 +176,131 @@ const firebaseConfig = {
   appId: "1:244765017519:web:62ded292f78c9be40c5b5a"
 };
 
-const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-const db  = getFirestore(app);
+const app  = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
 
-// حفظ الإعدادات في Firestore
+// ── حفظ الإعدادات في Firestore ──
 window.saveSettingsToFirebase = async function(settings) {
   try {
     await setDoc(doc(db, 'settings', 'main'), settings);
-    console.log('Settings saved to Firestore ✅');
+    console.log('✅ Settings saved to Firestore');
     return true;
   } catch(e) {
-    console.error('Save error:', e);
+    console.error('❌ Save error:', e.code, e.message);
     return false;
   }
 };
 
-// تحميل الإعدادات من Firestore
+// ── تحميل الإعدادات من Firestore ──
 window.loadSettingsFromFirebase = async function() {
   try {
     const snap = await getDoc(doc(db, 'settings', 'main'));
-    if (snap.exists()) return snap.data();
+    if (snap.exists()) {
+      console.log('✅ Settings loaded from Firestore');
+      return snap.data();
+    }
+    console.log('⚠️ No settings in Firestore yet');
     return null;
   } catch(e) {
-    console.error('Load error:', e);
+    console.error('❌ Load error:', e.code, e.message);
     return null;
   }
 };
+
+// ── جيب المستخدمين من Firestore ──
+window.loadFirebaseUsers = async function() {
+  const list = document.getElementById('users-list');
+  if (!list) return;
+  try {
+    const { getDocs, collection } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    const snap = await getDocs(collection(db, 'users'));
+    const icons  = { super:'👑', admin:'🧑‍💼', driver:'🛵' };
+    const names  = { super:'سوبر أدمن', admin:'أدمن', driver:'مندوب' };
+    const colors = { super:'var(--orange)', admin:'#60a5fa', driver:'var(--green)' };
+    if (snap.empty) {
+      list.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-mid);font-size:13px">مفيش مستخدمين في Firebase دلوقتي</div>`;
+      return;
+    }
+    list.innerHTML = snap.docs.map(d => {
+      const u = d.data(); const role = u.role || 'driver';
+      return `<div class="user-card">
+        <div class="user-avatar" style="border-color:${colors[role]||'var(--border)'}">${icons[role]||'👤'}</div>
+        <div class="user-info">
+          <div class="user-name">${u.name||'بدون اسم'}</div>
+          <div style="margin-top:4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="user-role-badge role-${role}">${names[role]||role}</span>
+            <span style="font-size:11px;color:var(--text-mid)">${u.email||''}</span>
+          </div>
+        </div>
+        <div style="font-size:11px;color:var(--text-dim);font-family:monospace">${d.id.slice(0,8)}...</div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    list.innerHTML = `<div style="color:var(--red);text-align:center;padding:16px;font-size:13px;font-weight:700">❌ تعذّر تحميل المستخدمين<br><small style="color:var(--text-mid);font-weight:400">${e.code||e.message}</small></div>`;
+  }
+};
+
+// ── logout مع Firebase signOut ──
+window.doLogout = function() {
+  if (confirm('عايز تخرج؟')) {
+    signOut(auth).catch(()=>{});
+    localStorage.removeItem('altayar_user');
+    window.location.href = 'login.html';
+  }
+};
+
+// ── تحميل الإعدادات عند فتح الصفحة ──
+window.addEventListener('load', async () => {
+  // جيب من Firestore أول
+  const s = await window.loadSettingsFromFirebase();
+  const finalSettings = s || (() => {
+    try { return JSON.parse(localStorage.getItem('altayar_settings')); } catch(e){ return null; }
+  })();
+
+  if (finalSettings) {
+    // حدّث الـ UI بالإعدادات المحفوظة
+    const set    = (id, val) => { const el=document.getElementById(id); if(el&&val!==undefined&&val!==null) el.value=val; };
+    const setChk = (id, val) => { const el=document.getElementById(id); if(el&&val!==undefined&&val!==null) el.checked=val; };
+    const f = finalSettings;
+    set('g-page-title',f.pageTitle); set('g-footer',f.footer); setChk('g-footer-show',f.footerShow);
+    set('c-orange-hex',f.orange); set('c-orange',f.orange);
+    set('c-orange-dark-hex',f.orangeDark); set('c-orange-dark',f.orangeDark);
+    set('c-orange-light-hex',f.orangeLight); set('c-orange-light',f.orangeLight);
+    set('c-bg-hex',f.bg); set('c-bg',f.bg);
+    set('h-logo-main',f.logoMain); set('h-logo-sub',f.logoSub); set('h-icon',f.headerIcon);
+    set('hero-title',f.heroTitle); set('hero-sub',f.heroSub);
+    set('hero-gradient-dir',f.heroGradientDir); setChk('hero-show-steps',f.heroShowSteps);
+    set('cc-icon',f.ccIcon); set('cc-title',f.ccTitle); set('cc-sub',f.ccSub); setChk('cc-show',f.ccShow);
+    set('cc-name-label',f.ccNameLabel); set('cc-name-ph',f.ccNamePh);
+    set('cc-phone-label',f.ccPhoneLabel); set('cc-phone-ph',f.ccPhonePh); setChk('cc-phone-show',f.ccPhoneShow);
+    set('ca-icon',f.caIcon); set('ca-title',f.caTitle); set('ca-sub',f.caSub);
+    set('ca-from-label',f.caFromLabel); set('ca-from-ph',f.caFromPh); set('ca-from-hint',f.caFromHint);
+    setChk('ca-from-voice',f.caFromVoice);
+    set('ca-to-label',f.caToLabel); set('ca-to-ph',f.caToPh); set('ca-to-hint',f.caToHint);
+    setChk('ca-to-voice',f.caToVoice); set('ca-divider-icon',f.caDividerIcon);
+    set('co-icon',f.coIcon); set('co-title',f.coTitle); set('co-sub',f.coSub);
+    set('co-details-ph',f.coDetailsPh);
+    set('sb-text',f.sbText); set('sb-icon',f.sbIcon);
+    set('sb-success-icon',f.sbSuccessIcon); set('sb-success-title',f.sbSuccessTitle); set('sb-close-text',f.sbCloseText);
+    set('ft-text',f.ftText); setChk('ft-show',f.ftShow);
+    if(f.waSettings){
+      const wa=f.waSettings;
+      const sc=(id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined)el.checked=v;};
+      const sv=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+      sc('wa-header',wa.header);sc('wa-name',wa.name);sc('wa-phone',wa.phone);
+      sc('wa-from',wa.from);sc('wa-to',wa.to);sc('wa-details',wa.details);
+      sc('wa-type',wa.type);sc('wa-amount',wa.amount);sc('wa-time',wa.time);
+      sc('wa-notes',wa.notes);sc('wa-footer',wa.footer);
+      sv('wa-header-text',wa.headerText);sv('wa-footer-text',wa.footerText);sv('wa-separator',wa.separator);
+    }
+    // حفظ محلي كـ cache
+    localStorage.setItem('altayar_settings', JSON.stringify(finalSettings));
+  }
+
+  // جيب المستخدمين
+  if (window.loadFirebaseUsers) window.loadFirebaseUsers();
+});
 </script>
 
 <script>
@@ -1062,59 +1162,8 @@ function applyAndPreview() {
   window.open('index.html');
 }
 
-// LOAD SAVED - من Firestore أولاً، لو مفيش نجيب من localStorage
-window.addEventListener('load', async () => {
-  let s = null;
-  // حاول تجيب من Firestore
-  if (window.loadSettingsFromFirebase) {
-    s = await window.loadSettingsFromFirebase();
-  }
-  // لو مش موجود في Firestore، جيب من localStorage
-  if (!s) {
-    const saved = localStorage.getItem('altayar_settings');
-    if (saved) { try { s = JSON.parse(saved); } catch(e){} }
-  }
-  if (!s) return;
-    const set = (id, val) => { const el=document.getElementById(id); if(el) el.value=val; };
-    const setChk = (id, val) => { const el=document.getElementById(id); if(el) el.checked=val; };
-    set('g-page-title', s.pageTitle); set('g-footer', s.footer);
-    setChk('g-footer-show', s.footerShow);
-    set('c-orange-hex', s.orange); set('c-orange', s.orange);
-    set('c-orange-dark-hex', s.orangeDark); set('c-orange-dark', s.orangeDark);
-    set('c-orange-light-hex', s.orangeLight); set('c-orange-light', s.orangeLight);
-    set('c-bg-hex', s.bg); set('c-bg', s.bg);
-    set('h-logo-main', s.logoMain); set('h-logo-sub', s.logoSub); set('h-icon', s.headerIcon);
-    set('hero-title', s.heroTitle); set('hero-sub', s.heroSub);
-    set('hero-gradient-dir', s.heroGradientDir);
-    setChk('hero-show-steps', s.heroShowSteps);
-    set('cc-icon', s.ccIcon); set('cc-title', s.ccTitle); set('cc-sub', s.ccSub);
-    setChk('cc-show', s.ccShow);
-    set('cc-name-label', s.ccNameLabel); set('cc-name-ph', s.ccNamePh);
-    set('cc-phone-label', s.ccPhoneLabel); set('cc-phone-ph', s.ccPhonePh);
-    setChk('cc-phone-show', s.ccPhoneShow);
-    set('ca-icon', s.caIcon); set('ca-title', s.caTitle); set('ca-sub', s.caSub);
-    set('ca-from-label', s.caFromLabel); set('ca-from-ph', s.caFromPh); set('ca-from-hint', s.caFromHint);
-    setChk('ca-from-voice', s.caFromVoice);
-    set('ca-to-label', s.caToLabel); set('ca-to-ph', s.caToPh); set('ca-to-hint', s.caToHint);
-    setChk('ca-to-voice', s.caToVoice);
-    set('ca-divider-icon', s.caDividerIcon);
-    set('co-icon', s.coIcon); set('co-title', s.coTitle); set('co-sub', s.coSub);
-    set('co-details-ph', s.coDetailsPh);
-    set('sb-text', s.sbText); set('sb-icon', s.sbIcon);
-    set('sb-success-icon', s.sbSuccessIcon); set('sb-success-title', s.sbSuccessTitle); set('sb-close-text', s.sbCloseText);
-    set('ft-text', s.ftText); setChk('ft-show', s.ftShow);
 
-  // حفظ في localStorage كـ cache
-  localStorage.setItem('altayar_settings', JSON.stringify(s));
-});
-
-// User badge + logout
-window.doLogout = function() {
-  if (confirm('عايز تخرج؟')) {
-    localStorage.removeItem('altayar_user');
-    window.location.href = 'login.html';
-  }
-};
+// logout handled by Firebase module above
 
 (function(){
   const u = window.__altayar_user;
@@ -1207,29 +1256,6 @@ function previewWA() {
   document.getElementById('wa-preview').textContent = lines.join('\n');
 }
 
-window.addEventListener('load', () => {
-  // جيب المستخدمين من Firebase
-  loadFirebaseUsers();
-
-  // تحميل إعدادات WA
-  const saved = localStorage.getItem('altayar_settings');
-  if (saved) {
-    try {
-      const s = JSON.parse(saved);
-      if (s.waSettings) {
-        const wa = s.waSettings;
-        const sc = (id,v) => { const el=document.getElementById(id); if(el) el.checked=v; };
-        const sv = (id,v) => { const el=document.getElementById(id); if(el&&v) el.value=v; };
-        sc('wa-header',wa.header); sc('wa-name',wa.name); sc('wa-phone',wa.phone);
-        sc('wa-from',wa.from);     sc('wa-to',wa.to);     sc('wa-details',wa.details);
-        sc('wa-type',wa.type);     sc('wa-amount',wa.amount); sc('wa-time',wa.time);
-        sc('wa-notes',wa.notes);   sc('wa-footer',wa.footer);
-        sv('wa-header-text',wa.headerText); sv('wa-footer-text',wa.footerText);
-        sv('wa-separator',wa.separator);
-      }
-    } catch(e){}
-  }
-});
 </script>
 </body>
 </html>
