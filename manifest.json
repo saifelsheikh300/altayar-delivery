@@ -1,0 +1,18 @@
+{
+  "name": "الطيار ديليفري",
+  "short_name": "الطيار",
+  "description": "نظام إدارة طلبات التوصيل",
+  "start_url": "/altayar-delivery/login.html",
+  "scope": "/altayar-delivery/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0D0D0D",
+  "theme_color": "#FF4500",
+  "lang": "ar",
+  "dir": "rtl",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
