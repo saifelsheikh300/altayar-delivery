@@ -365,6 +365,7 @@ async function loadStaffList() {
     const snap = await getDocs(collection(db, 'users'));
     staffList = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
       .filter(u => ['driver','admin','super'].includes(u.role));
+    renderOrders(); // نعيد رسم الطلبات عشان قائمة التعيين تظهر بأسماء الموظفين صح
   } catch(e) {
     console.error('تعذر تحميل قائمة الموظفين:', e);
   }
