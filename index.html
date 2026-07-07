@@ -387,12 +387,20 @@ window.submitOrder = async function() {
     const voiceTo      = audioBlobs['to-address']      ? await toBase64(audioBlobs['to-address'])      : null;
     const voiceDetails = audioBlobs['order-details']   ? await toBase64(audioBlobs['order-details'])   : null;
 
-    await addDoc(collection(db, 'orders'), {
+    const orderRef = await addDoc(collection(db, 'orders'), {
       name, phone, from, to, details, amount, time, notes, type,
       voiceFrom, voiceTo, voiceDetails,
       status: 'جديد',
       createdAt: serverTimestamp()
     });
+
+    // نبعت نداء فوري لسيرفر الإشعارات (Cloudflare) - من غير ما نستنى رده عشان العميل ياخد رد سريع
+    fetch('https://altayar-notify.saifelsheikh300.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: orderRef.id, name, from, to })
+    }).catch(e => console.warn('تعذر إرسال نداء الإشعار:', e));
+
     document.getElementById('success-msg').innerHTML =
       `تم استلام طلبك يا <strong>${name}</strong>! 🎉<br>هنبدأ التجهيز فوراً ✈️`;
     document.getElementById('success-overlay').classList.add('show');
