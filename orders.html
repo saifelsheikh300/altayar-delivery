@@ -222,6 +222,9 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
   <button class="filter-btn" onclick="setFilter('جاري',this)">⚡ جاري</button>
   <button class="filter-btn" onclick="setFilter('تم',this)">✅ تم</button>
   <button class="filter-btn" onclick="setFilter('ملغي',this)">❌ ملغي</button>
+  <select id="driver-filter" onchange="setDriverFilter(this.value)" style="display:none;background:#1a1a1a;color:#fff;border:1px solid #2a2a2a;border-radius:8px;padding:6px 10px;font-size:13px">
+    <option value="">👤 كل المناديب</option>
+  </select>
   <input class="search-box" id="search-input" placeholder="🔍 ابحث باسم أو تليفون..." oninput="renderOrders()">
 </div>
 
@@ -258,6 +261,7 @@ const auth = getAuth(app);
 
 let allOrders     = [];
 let currentFilter = 'all';
+let currentDriverFilter = ''; // فلتر المندوب (للأدمن/السوبر بس)
 let staffList     = []; // كل المناديب/الأدمنز اللي ممكن نعين عليهم أوردر
 let isFirstLoad   = true;
 let unsubscribe   = null;
@@ -365,11 +369,27 @@ async function loadStaffList() {
     const snap = await getDocs(collection(db, 'users'));
     staffList = snap.docs.map(d => ({ uid: d.id, ...d.data() }))
       .filter(u => ['driver','admin','super'].includes(u.role));
+
+    // نظهر فلتر المناديب بس للأدمن/السوبر، ونملأه بالأسماء
+    const role = window.__altayar_user?.role || 'driver';
+    const filterEl = document.getElementById('driver-filter');
+    if (filterEl && (role === 'admin' || role === 'super')) {
+      filterEl.style.display = 'inline-block';
+      const drivers = staffList.filter(s => s.role === 'driver');
+      filterEl.innerHTML = '<option value="">👤 كل المناديب</option>' +
+        drivers.map(d => `<option value="${d.uid}">🛵 ${d.name || d.email || 'مندوب'}</option>`).join('');
+    }
+
     renderOrders(); // نعيد رسم الطلبات عشان قائمة التعيين تظهر بأسماء الموظفين صح
   } catch(e) {
     console.error('تعذر تحميل قائمة الموظفين:', e);
   }
 }
+
+window.setDriverFilter = function(uid) {
+  currentDriverFilter = uid;
+  renderOrders();
+};
 
 // فتح/قفل قائمة تعيين المندوب تحت كل أوردر
 window.toggleAssignMenu = function(orderId) {
@@ -539,10 +559,16 @@ window.archiveOrder = function(id) {
 // renderOrders النهائي - بيراعي الأرشيف والفلتر والبحث
 window.renderOrders = function() {
   const search = document.getElementById('search-input').value.toLowerCase();
+  const role  = window.__altayar_user?.role || 'driver';
+  const myUid = window.__altayar_user?.uid || '';
   let filtered = allOrders.filter(o => {
     if (archivedIds.includes(o.id)) return false;
     if (currentFilter !== 'all' && o.status !== currentFilter) return false;
     if (search && !o.name?.toLowerCase().includes(search) && !o.phone?.includes(search)) return false;
+    // المندوب يشوف بس الأوردرات المعيّنة له
+    if (role === 'driver' && o.assignedTo !== myUid) return false;
+    // فلتر المندوب المختار (للأدمن/السوبر)
+    if (currentDriverFilter && o.assignedTo !== currentDriverFilter) return false;
     return true;
   });
   const grid  = document.getElementById('orders-grid');
