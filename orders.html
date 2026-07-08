@@ -414,6 +414,21 @@ window.assignOrder = async function(orderId, staffUid, staffName) {
     });
     closeAssignMenu(orderId);
     showNotif(`✅ اتعين لـ ${staffName}`);
+
+    // نبعت إشعار فوري للمندوب اللي اتعين عليه الأوردر
+    const o = allOrders.find(x => x.id === orderId) || {};
+    fetch('https://altayar-notify.saifelsheikh300.workers.dev', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: 'assign',
+        targetUid: staffUid,
+        id: orderId,
+        name: o.name || '',
+        from: o.from || '',
+        to: o.to || ''
+      })
+    }).catch(e => console.warn('تعذر إرسال إشعار التعيين:', e));
   } catch(e) {
     console.error('فشل التعيين:', e);
     showNotif('❌ حصلت مشكلة في التعيين');
@@ -421,8 +436,11 @@ window.assignOrder = async function(orderId, staffUid, staffName) {
 };
 
 function updateStats() {
+  const role  = window.__altayar_user?.role || 'driver';
+  const myUid = window.__altayar_user?.uid || '';
   const today = new Date().toDateString();
-  const todayOrders = allOrders.filter(o => {
+  const scopedOrders = role === 'driver' ? allOrders.filter(o => o.assignedTo === myUid) : allOrders;
+  const todayOrders = scopedOrders.filter(o => {
     if (!o.createdAt) return false;
     return new Date(o.createdAt.seconds*1000).toDateString() === today;
   });
@@ -430,7 +448,7 @@ function updateStats() {
   document.getElementById('stat-progress').textContent = todayOrders.filter(o=>o.status==='جاري').length;
   document.getElementById('stat-done').textContent     = todayOrders.filter(o=>o.status==='تم').length;
   document.getElementById('stat-all').textContent      = todayOrders.length;
-  document.getElementById('total-count').textContent   = allOrders.length + ' طلب';
+  document.getElementById('total-count').textContent   = scopedOrders.length + ' طلب';
 }
 
 function orderCard(o) {
