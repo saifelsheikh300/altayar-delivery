@@ -51,6 +51,18 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 .search-box:focus{border-color:var(--orange)}
 .search-box::placeholder{color:var(--text-mid)}
 
+/* قائمة فلتر المناديب — نفس عائلة تصميم أزرار الفلاتر وخانة البحث */
+.driver-select{
+  background:var(--card);border:1.5px solid var(--border);border-radius:50px;
+  padding:7px 34px 7px 16px;font-size:13px;font-weight:700;color:var(--text);
+  cursor:pointer;outline:none;transition:all .15s;
+  -webkit-appearance:none;-moz-appearance:none;appearance:none;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0Z' fill='%23AAAAAA'/></svg>");
+  background-repeat:no-repeat;background-position:left 14px center;
+}
+.driver-select:hover,.driver-select:focus{border-color:var(--orange)}
+.driver-select option{background:var(--card);color:var(--text)}
+
 /* ORDERS GRID */
 .orders-section{max-width:1100px;margin:16px auto 40px;padding:0 16px}
 .orders-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
@@ -133,19 +145,26 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
 
 /* موبايل صغير */
 @media(max-width:480px){
-  .stats-bar{grid-template-columns:1fr 1fr;gap:8px}
+  .stats-bar{grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .stat-card{padding:14px 12px}
   .orders-grid{grid-template-columns:1fr}
   .stat-num{font-size:20px}
-  .header-inner{padding:10px 14px;flex-wrap:wrap;gap:8px}
-  .filters{gap:6px}
-  .filter-btn{padding:6px 12px;font-size:12px}
+  .header-inner{padding:12px 14px;flex-wrap:wrap;gap:10px 8px}
+  .header-right{gap:8px;row-gap:8px}
+  .orders-count{padding:5px 12px;font-size:12px}
+  #user-badge{padding:5px 12px!important;font-size:12px!important}
+  .filters{gap:8px;margin-top:16px}
+  .filter-btn{padding:8px 14px;font-size:12px}
+  .driver-select{padding:8px 30px 8px 14px;font-size:12px;background-position:left 12px center}
+  .search-box{padding:8px 14px;font-size:12px}
   .dot-menu{left:auto;right:0;min-width:150px}
 }
 
 /* موبايل كبير / تابلت صغير */
 @media(min-width:481px) and (max-width:768px){
-  .stats-bar{grid-template-columns:repeat(4,1fr)}
+  .stats-bar{grid-template-columns:repeat(4,1fr);gap:12px}
   .orders-grid{grid-template-columns:repeat(auto-fill,minmax(280px,1fr))}
+  .filters{gap:9px}
 }
 
 /* تابلت */
@@ -201,8 +220,10 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
     <div class="header-right">
       <div class="live-dot"></div>
       <span class="live-label">مباشر</span>
-      <button id="notif-toggle-btn" onclick="requestNotifPermission()" style="background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🔕 فعّل الإشعارات</button>
+      <!-- زرار تفعيل الإشعارات: متخفي بناءً على طلب سيف، الكود الأصلي محفوظ زي ما هو -->
+      <button id="notif-toggle-btn" onclick="requestNotifPermission()" style="display:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🔕 فعّل الإشعارات</button>
       <span class="orders-count" id="total-count">0 طلب</span>
+      <button id="back-to-admin-btn" onclick="window.location.href='admin.html'" style="display:none;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:6px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✅ تمام</button>
       <span id="user-badge" style="background:rgba(255,255,255,0.15);border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;color:#fff"></span>
       <button onclick="doLogout()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:6px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🚪 خروج</button>
     </div>
@@ -222,7 +243,7 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
   <button class="filter-btn" onclick="setFilter('جاري',this)">⚡ جاري</button>
   <button class="filter-btn" onclick="setFilter('تم',this)">✅ تم</button>
   <button class="filter-btn" onclick="setFilter('ملغي',this)">❌ ملغي</button>
-  <select id="driver-filter" onchange="setDriverFilter(this.value)" style="display:none;background:#1a1a1a;color:#fff;border:1px solid #2a2a2a;border-radius:8px;padding:6px 10px;font-size:13px">
+  <select id="driver-filter" class="driver-select" onchange="setDriverFilter(this.value)" style="display:none">
     <option value="">👤 كل المناديب</option>
   </select>
   <input class="search-box" id="search-input" placeholder="🔍 ابحث باسم أو تليفون..." oninput="renderOrders()">
@@ -831,6 +852,11 @@ window.doLogout = function() {
   if (badge) {
     const icons = { super: '👑', admin: '🧑‍💼', driver: '🛵' };
     badge.textContent = (icons[u.role] || '👤') + ' ' + u.name;
+  }
+  // زرار "تمام" بيظهر للسوبر أدمن بس، عشان يرجعله على صفحة التعديل (admin.html)
+  if (u.role === 'super') {
+    const backBtn = document.getElementById('back-to-admin-btn');
+    if (backBtn) backBtn.style.display = 'inline-block';
   }
 })();
 </script>

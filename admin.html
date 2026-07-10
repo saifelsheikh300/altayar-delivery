@@ -96,7 +96,8 @@ textarea.ctrl-input{min-height:70px;resize:vertical}
 input[type=range]{width:100%;accent-color:var(--orange);height:4px}
 
 /* SELECT */
-select.ctrl-input{cursor:pointer}
+select.ctrl-input{cursor:pointer;-webkit-appearance:none;-moz-appearance:none;appearance:none;padding-left:30px;background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='6'><path d='M0 0L5 6L10 0Z' fill='%23999999'/></svg>");background-repeat:no-repeat;background-position:left 12px center}
+select.ctrl-input option{background:var(--bg);color:var(--text)}
 
 /* CHIP EDITOR */
 .chip-editor{display:flex;flex-direction:column;gap:8px}
