@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>تقارير الطيار</title>
+<link rel="icon" href="favicon.png">
+<style>
+  :root{
+    --bg:#0f0f0f; --card:#1a1a1a; --border:#262626;
+    --text:#f2f2f2; --text-mid:#9a9a9a; --text-dim:#6b6b6b;
+    --orange:#FD5003; --green:#22c55e; --blue:#3b82f6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{background:var(--bg); color:var(--text); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Tahoma,Arial,sans-serif; direction:rtl; padding-bottom:40px}
+
+  header{background:var(--orange); padding:18px 16px; display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:10px}
+  header h1{font-size:17px; font-weight:800; color:#fff}
+  header .sub{font-size:12px; color:rgba(255,255,255,.85); margin-top:2px}
+  #user-badge{background:rgba(255,255,255,0.15); border-radius:50px; padding:5px 14px; font-size:12px; font-weight:700; color:#fff}
+
+  .tabs{display:flex; gap:8px; padding:16px; max-width:900px; margin:0 auto}
+  .tab-btn{flex:1; background:var(--card); border:1.5px solid var(--border); border-radius:12px; padding:10px 8px; font-size:13px; font-weight:700; color:var(--text-mid); cursor:pointer; transition:all .15s; text-align:center}
+  .tab-btn.active{background:var(--orange); border-color:var(--orange); color:#fff}
+
+  .container{max-width:900px; margin:0 auto; padding:0 16px}
+
+  .summary-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-bottom:20px}
+  .summary-card{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px 10px; text-align:center}
+  .summary-card .num{font-size:22px; font-weight:800; margin-bottom:4px}
+  .summary-card .lbl{font-size:11px; color:var(--text-mid)}
+  .num.orange{color:var(--orange)} .num.green{color:var(--green)} .num.blue{color:var(--blue)}
+
+  .section-title{font-size:14px; font-weight:800; color:var(--text-mid); margin:22px 0 10px; display:flex; align-items:center; gap:6px}
+
+  .driver-row{background:var(--card); border:1px solid var(--border); border-radius:12px; padding:12px 14px; display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
+  .driver-info{display:flex; align-items:center; gap:10px}
+  .driver-rank{width:26px; height:26px; border-radius:50%; background:var(--border); display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:800; color:var(--text-mid); flex-shrink:0}
+  .driver-rank.top1{background:#f5b800; color:#000}
+  .driver-rank.top2{background:#c7c7c7; color:#000}
+  .driver-rank.top3{background:#c98a4b; color:#000}
+  .driver-name{font-size:14px; font-weight:700}
+  .driver-stats{text-align:left; font-size:12px; color:var(--text-mid)}
+  .driver-stats b{color:var(--text); font-size:14px}
+
+  .empty-state{text-align:center; padding:40px 20px; color:var(--text-dim); font-size:13px}
+  .loading-state{text-align:center; padding:40px 20px; color:var(--text-mid); font-size:13px}
+
+  @media(max-width:480px){
+    .summary-card .num{font-size:18px}
+    .summary-card .lbl{font-size:10px}
+    header h1{font-size:15px}
+  }
+</style>
+</head>
+<body>
+
+<script>
+(function(){
+  if (window.location.protocol === 'file:') {
+    if (!localStorage.getItem('altayar_user')) {
+      localStorage.setItem('altayar_user', JSON.stringify({
+        uid:'local-test', name:'تجربة محلية', role:'super',
+        canAccess:['admin.html','orders.html','index.html']
+      }));
+    }
+  }
+  var u = localStorage.getItem('altayar_user');
+  if (!u) { window.location.href='login.html'; return; }
+  var user = JSON.parse(u);
+  if (!user.canAccess || user.canAccess.indexOf('admin.html') === -1) {
+    alert('⛔ مش معاك صلاحية'); window.location.href='login.html'; return;
+  }
+  window.__altayar_user = user;
+})();
+</script>
+
+<header>
+  <div>
+    <h1>📊 تقارير الطيار</h1>
+    <div class="sub">إحصائيات المناديب والمبيعات</div>
+  </div>
+  <span id="user-badge"></span>
+</header>
+
+<div class="tabs">
+  <button class="tab-btn active" data-range="today">اليوم</button>
+  <button class="tab-btn" data-range="week">الأسبوع</button>
+  <button class="tab-btn" data-range="month">الشهر</button>
+</div>
+
+<div class="container">
+  <div id="loading" class="loading-state">⏳ بيحمّل البيانات...</div>
+
+  <div id="content" style="display:none">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="num orange" id="sum-orders">0</div>
+        <div class="lbl">عدد الطلبات</div>
+      </div>
+      <div class="summary-card">
+        <div class="num green" id="sum-sales">0</div>
+        <div class="lbl">إجمالي المبيعات (ج)</div>
+      </div>
+      <div class="summary-card">
+        <div class="num blue" id="sum-avg">0</div>
+        <div class="lbl">متوسط الطلب (ج)</div>
+      </div>
+    </div>
+
+    <div class="section-title">🏆 أداء المناديب</div>
+    <div id="drivers-list"></div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBuKW9vBGj_q1LIE5QrRtFmpsJ5Ifg6D4w",
+  authDomain: "altayar-delivery.firebaseapp.com",
+  projectId: "altayar-delivery",
+  storageBucket: "altayar-delivery.firebasestorage.app",
+  messagingSenderId: "244765017519",
+  appId: "1:244765017519:web:62ded292f78c9be40c5b5a"
+};
+
+const app  = initializeApp(firebaseConfig);
+const db   = getFirestore(app);
+const auth = getAuth(app);
+
+let allOrders  = [];
+let currentRange = 'today';
+
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function rangeStart(range){
+  const now = new Date();
+  if (range === 'today') {
+    return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  }
+  if (range === 'week') {
+    const d = new Date(now);
+    const day = d.getDay(); // 0=الأحد
+    d.setDate(d.getDate() - day);
+    d.setHours(0,0,0,0);
+    return d;
+  }
+  // month
+  return new Date(now.getFullYear(), now.getMonth(), 1);
+}
+
+function computeAndRender(){
+  const start = rangeStart(currentRange).getTime();
+  const filtered = allOrders.filter(o => {
+    if (!o.createdAt || !o.createdAt.seconds) return false;
+    return (o.createdAt.seconds * 1000) >= start;
+  });
+
+  const doneOrders = filtered.filter(o => o.status === 'تم');
+  const totalSales = doneOrders.reduce((sum,o) => sum + (parseFloat(o.amount) || 0), 0);
+  const avg = doneOrders.length ? (totalSales / doneOrders.length) : 0;
+
+  document.getElementById('sum-orders').textContent = filtered.length;
+  document.getElementById('sum-sales').textContent  = totalSales.toLocaleString('ar-EG');
+  document.getElementById('sum-avg').textContent    = Math.round(avg).toLocaleString('ar-EG');
+
+  // أداء المناديب: حسب عدد الأوردرات "تم" لكل مندوب
+  const perDriver = {};
+  doneOrders.forEach(o => {
+    if (!o.assignedTo) return;
+    const key = o.assignedTo;
+    if (!perDriver[key]) perDriver[key] = { name: o.assignedToName || 'مندوب', count: 0, sales: 0 };
+    perDriver[key].count += 1;
+    perDriver[key].sales += (parseFloat(o.amount) || 0);
+  });
+
+  const ranked = Object.values(perDriver).sort((a,b) => b.count - a.count);
+  const listEl = document.getElementById('drivers-list');
+
+  if (!ranked.length) {
+    listEl.innerHTML = '<div class="empty-state">مفيش أوردرات متوصّلة في الفترة دي</div>';
+  } else {
+    listEl.innerHTML = ranked.map((d, i) => {
+      const rankClass = i===0 ? 'top1' : i===1 ? 'top2' : i===2 ? 'top3' : '';
+      return `
+        <div class="driver-row">
+          <div class="driver-info">
+            <div class="driver-rank ${rankClass}">${i+1}</div>
+            <div class="driver-name">${esc(d.name)}</div>
+          </div>
+          <div class="driver-stats">
+            <b>${d.count}</b> طلب &nbsp;|&nbsp; <b>${d.sales.toLocaleString('ar-EG')}</b> ج
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  document.getElementById('loading').style.display = 'none';
+  document.getElementById('content').style.display = 'block';
+}
+
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentRange = btn.dataset.range;
+    computeAndRender();
+  });
+});
+
+onAuthStateChanged(auth, async user => {
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  const badge = document.getElementById('user-badge');
+  if (badge && window.__altayar_user) badge.textContent = '👑 ' + window.__altayar_user.name;
+
+  try {
+    const snap = await getDocs(collection(db, 'orders'));
+    allOrders = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    computeAndRender();
+  } catch(e) {
+    console.error(e);
+    document.getElementById('loading').innerHTML = '<div style="color:#ef4444">⚠️ حصل خطأ في تحميل البيانات</div>';
+  }
+});
+
+setTimeout(() => {
+  if (!auth.currentUser) window.location.href = 'login.html';
+}, 8000);
+</script>
+
+</body>
+</html>
