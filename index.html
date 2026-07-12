@@ -280,10 +280,68 @@ let audioChunks = [];
 let audioBlobs = {}; // fieldId -> blob
 
 // ── تسجيل صوت حقيقي ──
+// عرض مشغل صوت صغير بعد التسجيل (مستخدمة في مسار المتصفح ومسار التطبيق الأصلي)
+function showAudioPreview(fieldId, blob) {
+  audioBlobs[fieldId] = blob;
+
+  const field = document.getElementById(fieldId);
+  const wrap  = field.parentElement;
+  const oldPlayer = wrap.querySelector('.audio-player');
+  if (oldPlayer) oldPlayer.remove();
+
+  const url = URL.createObjectURL(blob);
+  const player = document.createElement('div');
+  player.className = 'audio-player';
+  player.style.cssText = 'margin-top:6px;display:flex;align-items:center;gap:8px;background:var(--orange-glow);border-radius:8px;padding:8px 10px;border:1px solid var(--border)';
+  player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
+  wrap.appendChild(player);
+
+  if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
+    field.placeholder = '🎙️ تم تسجيل رسالة صوتية';
+    field.value = '';
+  }
+}
+
+// نتيجة التسجيل لما يكون جوه تطبيق أندرويد (تسجيل أصلي، مش عن طريق المتصفح)
+let nativeRecordingField = null; // { fieldId, statusEl, btn }
+window.onNativeAudioResult = function(fieldId, base64) {
+  fetch('data:audio/m4a;base64,' + base64)
+    .then(r => r.blob())
+    .then(blob => {
+      showAudioPreview(fieldId, blob);
+      if (nativeRecordingField && nativeRecordingField.statusEl) {
+        nativeRecordingField.statusEl.textContent = '✅ تم التسجيل!';
+      }
+    })
+    .catch(() => {
+      if (nativeRecordingField && nativeRecordingField.statusEl) {
+        nativeRecordingField.statusEl.textContent = '⚠️ حصل خطأ في حفظ التسجيل';
+      }
+    });
+};
+
 window.startVoice = async function(fieldId, statusId, btn) {
   const statusEl = document.getElementById(statusId);
 
-  // لو في تسجيل شغال، وقفه
+  // مسار التطبيق: تسجيل صوت أصلي عن طريق أندرويد (بيتفادى مشكلة WebView مع المايك)
+  if (window.NativeAudio) {
+    if (nativeRecordingField && nativeRecordingField.fieldId === fieldId) {
+      window.NativeAudio.stopRecording(fieldId);
+      btn.classList.remove('recording');
+      btn.textContent = '🎤';
+      statusEl.textContent = '⏳ بيتحفظ...';
+      nativeRecordingField = null;
+      return;
+    }
+    window.NativeAudio.startRecording(fieldId);
+    nativeRecordingField = { fieldId, statusEl, btn };
+    btn.classList.add('recording');
+    btn.textContent = '⏹️';
+    statusEl.textContent = '🔴 جاري التسجيل... اضغط مرة تانية للإيقاف';
+    return;
+  }
+
+  // مسار المتصفح العادي (كروم وغيره) - زي ما كان بالظبط من غير أي تغيير
   if (mediaRecorder && mediaRecorder.state === 'recording') {
     mediaRecorder.stop();
     btn.classList.remove('recording');
@@ -303,27 +361,8 @@ window.startVoice = async function(fieldId, statusId, btn) {
 
     mediaRecorder.onstop = () => {
       const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
-      audioBlobs[fieldId] = blob;
       stream.getTracks().forEach(t => t.stop());
-
-      // عرض مشغل صوت صغير
-      const field = document.getElementById(fieldId);
-      const wrap  = field.parentElement;
-      const oldPlayer = wrap.querySelector('.audio-player');
-      if (oldPlayer) oldPlayer.remove();
-
-      const url = URL.createObjectURL(blob);
-      const player = document.createElement('div');
-      player.className = 'audio-player';
-      player.style.cssText = 'margin-top:6px;display:flex;align-items:center;gap:8px;background:var(--orange-glow);border-radius:8px;padding:8px 10px;border:1px solid var(--border)';
-      player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
-      wrap.appendChild(player);
-
-      // حط placeholder يدل إن في صوت مسجل
-      if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
-        field.placeholder = '🎙️ تم تسجيل رسالة صوتية';
-        field.value = '';
-      }
+      showAudioPreview(fieldId, blob);
     };
 
     mediaRecorder.start();
