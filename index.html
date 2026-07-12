@@ -281,6 +281,7 @@ let audioBlobs = {}; // fieldId -> blob
 
 // ── تسجيل صوت حقيقي ──
 // عرض مشغل صوت صغير بعد التسجيل (مستخدمة في مسار المتصفح ومسار التطبيق الأصلي)
+let audioBase64Cache = {}; // fieldId -> base64 data URL (جاهز فورًا من مسار التطبيق، بيوفر وقت وقت الإرسال)
 function showAudioPreview(fieldId, blob) {
   audioBlobs[fieldId] = blob;
 
@@ -293,7 +294,7 @@ function showAudioPreview(fieldId, blob) {
   const player = document.createElement('div');
   player.className = 'audio-player';
   player.style.cssText = 'margin-top:6px;display:flex;align-items:center;gap:8px;background:var(--orange-glow);border-radius:8px;padding:8px 10px;border:1px solid var(--border)';
-  player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
+  player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}'];delete audioBase64Cache['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
   wrap.appendChild(player);
 
   if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
@@ -303,20 +304,27 @@ function showAudioPreview(fieldId, blob) {
 }
 
 // نتيجة التسجيل لما يكون جوه تطبيق أندرويد (تسجيل أصلي، مش عن طريق المتصفح)
-let nativeRecordingField = null; // { fieldId, statusEl, btn }
+let nativeRecordingFields = {}; // fieldId -> { statusEl, btn }
 window.onNativeAudioResult = function(fieldId, base64) {
-  fetch('data:audio/m4a;base64,' + base64)
+  const refs = nativeRecordingFields[fieldId];
+  delete nativeRecordingFields[fieldId];
+
+  if (!base64) {
+    if (refs && refs.statusEl) refs.statusEl.textContent = '⚠️ حصل خطأ في حفظ التسجيل';
+    return;
+  }
+
+  const dataUrl = 'data:audio/m4a;base64,' + base64;
+  audioBase64Cache[fieldId] = dataUrl; // جاهز فورًا للإرسال، من غير ما نستنى وقت الطلب
+
+  fetch(dataUrl)
     .then(r => r.blob())
     .then(blob => {
       showAudioPreview(fieldId, blob);
-      if (nativeRecordingField && nativeRecordingField.statusEl) {
-        nativeRecordingField.statusEl.textContent = '✅ تم التسجيل!';
-      }
+      if (refs && refs.statusEl) refs.statusEl.textContent = '✅ تم التسجيل!';
     })
     .catch(() => {
-      if (nativeRecordingField && nativeRecordingField.statusEl) {
-        nativeRecordingField.statusEl.textContent = '⚠️ حصل خطأ في حفظ التسجيل';
-      }
+      if (refs && refs.statusEl) refs.statusEl.textContent = '⚠️ حصل خطأ في حفظ التسجيل';
     });
 };
 
@@ -325,16 +333,16 @@ window.startVoice = async function(fieldId, statusId, btn) {
 
   // مسار التطبيق: تسجيل صوت أصلي عن طريق أندرويد (بيتفادى مشكلة WebView مع المايك)
   if (window.NativeAudio) {
-    if (nativeRecordingField && nativeRecordingField.fieldId === fieldId) {
+    if (nativeRecordingFields[fieldId]) {
       window.NativeAudio.stopRecording(fieldId);
       btn.classList.remove('recording');
       btn.textContent = '🎤';
       statusEl.textContent = '⏳ بيتحفظ...';
-      nativeRecordingField = null;
       return;
     }
+    delete audioBase64Cache[fieldId];
     window.NativeAudio.startRecording(fieldId);
-    nativeRecordingField = { fieldId, statusEl, btn };
+    nativeRecordingFields[fieldId] = { statusEl, btn };
     btn.classList.add('recording');
     btn.textContent = '⏹️';
     statusEl.textContent = '🔴 جاري التسجيل... اضغط مرة تانية للإيقاف';
@@ -424,9 +432,9 @@ window.submitOrder = async function() {
       r.readAsDataURL(blob);
     });
 
-    const voiceFrom    = audioBlobs['from-address']    ? await toBase64(audioBlobs['from-address'])    : null;
-    const voiceTo      = audioBlobs['to-address']      ? await toBase64(audioBlobs['to-address'])      : null;
-    const voiceDetails = audioBlobs['order-details']   ? await toBase64(audioBlobs['order-details'])   : null;
+    const voiceFrom    = audioBase64Cache['from-address']  || (audioBlobs['from-address']  ? await toBase64(audioBlobs['from-address'])  : null);
+    const voiceTo      = audioBase64Cache['to-address']    || (audioBlobs['to-address']    ? await toBase64(audioBlobs['to-address'])    : null);
+    const voiceDetails = audioBase64Cache['order-details'] || (audioBlobs['order-details'] ? await toBase64(audioBlobs['order-details']) : null);
 
     const orderRef = await addDoc(collection(db, 'orders'), {
       name, phone, from, to, details, amount, time, notes, type,
