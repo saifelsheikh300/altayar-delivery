@@ -224,6 +224,7 @@ header{background:linear-gradient(135deg,var(--orange-dark),var(--orange));paddi
       <button id="notif-toggle-btn" onclick="requestNotifPermission()" style="display:none;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:8px;padding:5px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🔕 فعّل الإشعارات</button>
       <span class="orders-count" id="total-count">0 طلب</span>
       <button id="back-to-admin-btn" onclick="window.location.href='admin.html'" style="display:none;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:6px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">✏️ تعديل</button>
+      <button id="reports-btn" onclick="window.open('reports.html')" style="display:none;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:6px 14px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">📊 تقارير</button>
       <span id="user-badge" style="background:rgba(255,255,255,0.15);border-radius:50px;padding:5px 14px;font-size:12px;font-weight:700;color:#fff"></span>
       <button onclick="doLogout()" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25);border-radius:8px;padding:6px 12px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;">🚪 خروج</button>
     </div>
@@ -857,6 +858,8 @@ window.doLogout = function() {
   if (u.role === 'super') {
     const backBtn = document.getElementById('back-to-admin-btn');
     if (backBtn) backBtn.style.display = 'inline-block';
+    const reportsBtn = document.getElementById('reports-btn');
+    if (reportsBtn) reportsBtn.style.display = 'inline-block';
   }
 })();
 </script>
