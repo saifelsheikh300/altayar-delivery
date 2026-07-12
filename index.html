@@ -314,7 +314,7 @@ window.onNativeAudioResult = function(fieldId, base64) {
     return;
   }
 
-  const dataUrl = 'data:audio/m4a;base64,' + base64;
+  const dataUrl = 'data:audio/mp4;base64,' + base64;
   audioBase64Cache[fieldId] = dataUrl; // جاهز فورًا للإرسال، من غير ما نستنى وقت الطلب
 
   fetch(dataUrl)
