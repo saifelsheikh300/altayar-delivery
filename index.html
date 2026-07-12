@@ -332,7 +332,7 @@ window.startVoice = async function(fieldId, statusId, btn) {
     statusEl.textContent = '🔴 جاري التسجيل... اضغط مرة تانية للإيقاف';
 
   } catch(e) {
-    statusEl.textContent = '⚠️ مش قادر يوصل للميكروفون';
+    statusEl.textContent = '⚠️ ' + (e && e.name ? e.name + ': ' : '') + (e && e.message ? e.message : 'مش قادر يوصل للميكروفون');
     console.error(e);
   }
 };
