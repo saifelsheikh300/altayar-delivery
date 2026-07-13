@@ -260,6 +260,7 @@ footer{text-align:center;padding:14px;font-size:12px;color:#BBB;font-weight:500}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-storage.js";
 
 // ⚠️ ضع بيانات Firebase هنا
 const firebaseConfig = {
@@ -273,6 +274,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const storage = getStorage(app);
 
 let activeRecognition = null;
 let mediaRecorder = null;
@@ -281,7 +283,8 @@ let audioBlobs = {}; // fieldId -> blob
 
 // ── تسجيل صوت حقيقي ──
 // عرض مشغل صوت صغير بعد التسجيل (مستخدمة في مسار المتصفح ومسار التطبيق الأصلي)
-let audioBase64Cache = {}; // fieldId -> base64 data URL (جاهز فورًا من مسار التطبيق، بيوفر وقت وقت الإرسال)
+let audioBase64Cache = {}; // fieldId -> base64 data URL (احتياطي لو الرفع لـ Storage فشل)
+let audioUrlCache = {};    // fieldId -> رابط الصوت بعد الرفع لـ Firebase Storage (ده اللي بيتبعت مع الطلب)
 function showAudioPreview(fieldId, blob) {
   audioBlobs[fieldId] = blob;
 
@@ -294,13 +297,33 @@ function showAudioPreview(fieldId, blob) {
   const player = document.createElement('div');
   player.className = 'audio-player';
   player.style.cssText = 'margin-top:6px;display:flex;align-items:center;gap:8px;background:var(--orange-glow);border-radius:8px;padding:8px 10px;border:1px solid var(--border)';
-  player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}'];delete audioBase64Cache['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
+  player.innerHTML = `<audio controls src="${url}" style="flex:1;height:32px;accent-color:var(--orange)"></audio><button onclick="this.closest('.audio-player').remove();delete audioBlobs['${fieldId}'];delete audioBase64Cache['${fieldId}'];delete audioUrlCache['${fieldId}']" style="background:rgba(239,68,68,.15);border:none;border-radius:6px;padding:4px 8px;color:#ef4444;cursor:pointer;font-size:12px">✕</button>`;
   wrap.appendChild(player);
 
   if (field.tagName === 'INPUT' || field.tagName === 'TEXTAREA') {
     field.placeholder = '🎙️ تم تسجيل رسالة صوتية';
     field.value = '';
   }
+}
+
+// رفع التسجيل لـ Firebase Storage فور ما يخلص، عشان وقت الإرسال يبقى سريع
+// (الصوت بيتحفظ برا مستند الطلب نفسه، عشان منوصلش لحد 1 ميجا حد Firestore)
+function uploadVoiceToStorage(fieldId, blob, statusEl) {
+  const ext = blob.type.includes('mp4') ? 'm4a' : blob.type.includes('webm') ? 'webm' : blob.type.includes('ogg') ? 'ogg' : 'audio';
+  const path = 'voice-notes/' + Date.now() + '-' + fieldId + '-' + Math.random().toString(36).slice(2, 8) + '.' + ext;
+  const storageRef = ref(storage, path);
+
+  uploadBytes(storageRef, blob)
+    .then(snap => getDownloadURL(snap.ref))
+    .then(url => {
+      audioUrlCache[fieldId] = url;
+      if (statusEl) statusEl.textContent = '✅ تم التسجيل والحفظ!';
+    })
+    .catch(err => {
+      console.error(err);
+      // لو الرفع فشل (مثلاً مفيش نت)، هنستخدم الـ base64 كخطة بديلة وقت الإرسال
+      if (statusEl) statusEl.textContent = '✅ تم التسجيل! (هيترفع وقت الإرسال)';
+    });
 }
 
 // نتيجة التسجيل لما يكون جوه تطبيق أندرويد (تسجيل أصلي، مش عن طريق المتصفح)
@@ -315,13 +338,14 @@ window.onNativeAudioResult = function(fieldId, base64) {
   }
 
   const dataUrl = 'data:audio/mp4;base64,' + base64;
-  audioBase64Cache[fieldId] = dataUrl; // جاهز فورًا للإرسال، من غير ما نستنى وقت الطلب
+  audioBase64Cache[fieldId] = dataUrl; // احتياطي لو الرفع فشل
 
   fetch(dataUrl)
     .then(r => r.blob())
     .then(blob => {
       showAudioPreview(fieldId, blob);
-      if (refs && refs.statusEl) refs.statusEl.textContent = '✅ تم التسجيل!';
+      if (refs && refs.statusEl) refs.statusEl.textContent = '⏳ بيترفع...';
+      uploadVoiceToStorage(fieldId, blob, refs && refs.statusEl);
     })
     .catch(() => {
       if (refs && refs.statusEl) refs.statusEl.textContent = '⚠️ حصل خطأ في حفظ التسجيل';
@@ -341,6 +365,7 @@ window.startVoice = async function(fieldId, statusId, btn) {
       return;
     }
     delete audioBase64Cache[fieldId];
+    delete audioUrlCache[fieldId];
     window.NativeAudio.startRecording(fieldId);
     nativeRecordingFields[fieldId] = { statusEl, btn };
     btn.classList.add('recording');
@@ -354,7 +379,7 @@ window.startVoice = async function(fieldId, statusId, btn) {
     mediaRecorder.stop();
     btn.classList.remove('recording');
     btn.textContent = '🎤';
-    statusEl.textContent = '✅ تم التسجيل!';
+    statusEl.textContent = '⏳ بيترفع...';
     return;
   }
 
@@ -371,6 +396,8 @@ window.startVoice = async function(fieldId, statusId, btn) {
       const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
       stream.getTracks().forEach(t => t.stop());
       showAudioPreview(fieldId, blob);
+      delete audioUrlCache[fieldId];
+      uploadVoiceToStorage(fieldId, blob, statusEl);
     };
 
     mediaRecorder.start();
@@ -432,9 +459,9 @@ window.submitOrder = async function() {
       r.readAsDataURL(blob);
     });
 
-    const voiceFrom    = audioBase64Cache['from-address']  || (audioBlobs['from-address']  ? await toBase64(audioBlobs['from-address'])  : null);
-    const voiceTo      = audioBase64Cache['to-address']    || (audioBlobs['to-address']    ? await toBase64(audioBlobs['to-address'])    : null);
-    const voiceDetails = audioBase64Cache['order-details'] || (audioBlobs['order-details'] ? await toBase64(audioBlobs['order-details']) : null);
+    const voiceFrom    = audioUrlCache['from-address']  || audioBase64Cache['from-address']  || (audioBlobs['from-address']  ? await toBase64(audioBlobs['from-address'])  : null);
+    const voiceTo      = audioUrlCache['to-address']    || audioBase64Cache['to-address']    || (audioBlobs['to-address']    ? await toBase64(audioBlobs['to-address'])    : null);
+    const voiceDetails = audioUrlCache['order-details'] || audioBase64Cache['order-details'] || (audioBlobs['order-details'] ? await toBase64(audioBlobs['order-details']) : null);
 
     const orderRef = await addDoc(collection(db, 'orders'), {
       name, phone, from, to, details, amount, time, notes, type,
