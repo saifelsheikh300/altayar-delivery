@@ -47,6 +47,15 @@
   .empty-state{text-align:center; padding:40px 20px; color:var(--text-dim); font-size:13px}
   .loading-state{text-align:center; padding:40px 20px; color:var(--text-mid); font-size:13px}
 
+  .archive-box{background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:10px}
+  .archive-note{font-size:12px; color:var(--text-mid); line-height:1.8; margin-bottom:14px}
+  .archive-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+  .archive-row label{font-size:13px; color:var(--text); white-space:nowrap}
+  .archive-row input[type=date]{background:var(--bg); border:1px solid var(--border); border-radius:8px; padding:8px 10px; color:var(--text); font-size:13px; font-family:inherit}
+  .archive-row button{background:var(--orange); border:none; border-radius:8px; padding:9px 16px; color:#fff; font-weight:700; font-size:13px; cursor:pointer; white-space:nowrap}
+  .archive-row button:disabled{opacity:.6; cursor:not-allowed}
+  #archive-result{margin-top:12px; font-size:13px; color:var(--text-mid)}
+
   @media(max-width:480px){
     .summary-card .num{font-size:18px}
     .summary-card .lbl{font-size:10px}
@@ -111,12 +120,27 @@
 
     <div class="section-title">🏆 أداء المناديب</div>
     <div id="drivers-list"></div>
+
+    <div class="section-title">🧹 تنظيف الأرشيف</div>
+    <div class="archive-box">
+      <p class="archive-note">
+        بتشيل التسجيلات الصوتية بس من الطلبات القديمة (عشان تقلل حجم قاعدة البيانات)،
+        من غير ما تلمس الطلب نفسه — الاسم والتليفون والحالة والمندوب والتاريخ كله بيفضل زي ما هو،
+        وأرقام التقارير والإحصائيات مش بتتأثر خالص.
+      </p>
+      <div class="archive-row">
+        <label for="archive-date">امسح الأصوات الأقدم من:</label>
+        <input type="date" id="archive-date">
+        <button id="archive-btn" onclick="runArchive()">🧹 تنظيف دلوقتي</button>
+      </div>
+      <div id="archive-result"></div>
+    </div>
   </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -202,6 +226,54 @@ function computeAndRender(){
   document.getElementById('loading').style.display = 'none';
   document.getElementById('content').style.display = 'block';
 }
+
+window.runArchive = async function() {
+  const dateInput = document.getElementById('archive-date').value;
+  const resultEl = document.getElementById('archive-result');
+  const btn = document.getElementById('archive-btn');
+  if (!dateInput) { resultEl.textContent = '⚠️ اختار تاريخ الأول'; return; }
+
+  const cutoff = new Date(dateInput).getTime();
+  const candidates = allOrders.filter(o => {
+    if (!o.createdAt || !o.createdAt.seconds) return false;
+    const t = o.createdAt.seconds * 1000;
+    return t < cutoff && (o.voiceFrom || o.voiceTo || o.voiceDetails);
+  });
+
+  if (!candidates.length) {
+    resultEl.textContent = 'مفيش طلبات فيها أصوات قبل التاريخ ده.';
+    return;
+  }
+
+  if (!confirm(`هيتم مسح الأصوات بس من ${candidates.length} طلب (باقي بيانات الطلب هتفضل زي ما هي). متأكد؟`)) return;
+
+  btn.disabled = true;
+  resultEl.textContent = '⏳ بيتم التنظيف...';
+
+  let done = 0;
+  try {
+    // Firestore batch حد أقصى 500 عملية، فهنقسمهم مجموعات أصغر أمان
+    for (let i = 0; i < candidates.length; i += 400) {
+      const chunk = candidates.slice(i, i + 400);
+      const batch = writeBatch(db);
+      chunk.forEach(o => {
+        batch.update(doc(db, 'orders', o.id), { voiceFrom: null, voiceTo: null, voiceDetails: null });
+      });
+      await batch.commit();
+      done += chunk.length;
+      resultEl.textContent = `⏳ اتنظف ${done} من ${candidates.length}...`;
+    }
+
+    // تحديث النسخة المحلية عشان الأرقام والتقارير تفضل صح من غير ما نعيد تحميل الصفحة
+    candidates.forEach(o => { o.voiceFrom = null; o.voiceTo = null; o.voiceDetails = null; });
+
+    resultEl.textContent = `✅ تم تنظيف الأصوات من ${done} طلب. باقي بيانات الطلبات (الاسم، التليفون، الحالة، المندوب، التاريخ) فاضلة زي ما هي تمامًا.`;
+  } catch (err) {
+    console.error(err);
+    resultEl.textContent = '⚠️ حصل خطأ أثناء التنظيف: ' + (err && err.message ? err.message : '');
+  }
+  btn.disabled = false;
+};
 
 document.querySelectorAll('.tab-btn').forEach(btn => {
   btn.addEventListener('click', () => {
