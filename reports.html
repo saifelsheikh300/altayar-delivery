@@ -135,12 +135,39 @@
       </div>
       <div id="archive-result"></div>
     </div>
+
+    <div class="section-title">⚙️ إعدادات التنظيف التلقائي</div>
+    <div class="archive-box">
+      <p class="archive-note">
+        لما تفعّلها، النظام هيمسح تلقائي الأصوات من أي طلب أقدم من المدة اللي تحددها هنا،
+        من غير ما تحتاج تدخل تدوس بنفسك. تقدر تلغيها أو تغيّر المدة في أي وقت.
+      </p>
+      <div class="archive-row">
+        <label for="auto-toggle">التنظيف التلقائي:</label>
+        <select id="auto-toggle">
+          <option value="off">متوقف</option>
+          <option value="on">شغال</option>
+        </select>
+        <label for="auto-interval">امسح الأقدم من:</label>
+        <select id="auto-interval">
+          <option value="1">يوم</option>
+          <option value="2">يومين</option>
+          <option value="7">أسبوع</option>
+          <option value="14">أسبوعين</option>
+          <option value="30">شهر</option>
+          <option value="60">شهرين</option>
+          <option value="90">3 شهور</option>
+        </select>
+        <button id="auto-save-btn" onclick="saveAutoArchiveSettings()">💾 حفظ</button>
+      </div>
+      <div id="auto-archive-status"></div>
+    </div>
   </div>
 </div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getFirestore, collection, getDocs, doc, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { getFirestore, collection, getDocs, doc, writeBatch, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 const firebaseConfig = {
@@ -298,7 +325,42 @@ onAuthStateChanged(auth, async user => {
     console.error(e);
     document.getElementById('loading').innerHTML = '<div style="color:#ef4444">⚠️ حصل خطأ في تحميل البيانات</div>';
   }
+
+  try {
+    const settingsSnap = await getDoc(doc(db, 'settings', 'archive'));
+    if (settingsSnap.exists()) {
+      const s = settingsSnap.data();
+      document.getElementById('auto-toggle').value = s.enabled ? 'on' : 'off';
+      if (s.olderThanDays) document.getElementById('auto-interval').value = String(s.olderThanDays);
+      const statusEl = document.getElementById('auto-archive-status');
+      if (s.enabled) {
+        const lastRun = s.lastRunAt && s.lastRunAt.seconds
+          ? new Date(s.lastRunAt.seconds * 1000).toLocaleString('ar-EG')
+          : 'لسه ما اشتغلتش';
+        statusEl.textContent = `آخر مرة اشتغلت فيها الأتمتة: ${lastRun}`;
+      }
+    }
+  } catch(e) { console.error(e); }
 });
+
+window.saveAutoArchiveSettings = async function() {
+  const enabled = document.getElementById('auto-toggle').value === 'on';
+  const olderThanDays = parseInt(document.getElementById('auto-interval').value, 10);
+  const statusEl = document.getElementById('auto-archive-status');
+  const btn = document.getElementById('auto-save-btn');
+
+  btn.disabled = true;
+  try {
+    await setDoc(doc(db, 'settings', 'archive'), { enabled, olderThanDays }, { merge: true });
+    statusEl.textContent = enabled
+      ? `✅ اتحفظ. التنظيف التلقائي شغال، وهيمسح الأصوات الأقدم من ${document.getElementById('auto-interval').selectedOptions[0].textContent}.`
+      : '✅ اتحفظ. التنظيف التلقائي متوقف.';
+  } catch(e) {
+    console.error(e);
+    statusEl.textContent = '⚠️ حصل خطأ وقت الحفظ: ' + (e && e.message ? e.message : '');
+  }
+  btn.disabled = false;
+};
 
 setTimeout(() => {
   if (!auth.currentUser) window.location.href = 'login.html';
